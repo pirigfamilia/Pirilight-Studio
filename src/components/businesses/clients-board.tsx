@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CreditCard, Globe, Search } from "lucide-react";
 
 import { BusinessCard } from "@/components/businesses/business-card";
@@ -11,7 +11,7 @@ import {
   type ClientFilter,
   type ClientListRow,
 } from "@/components/businesses/client-list-row";
-import { BusinessOverallStatusBadge } from "@/components/domain/business-overall-status-badge";
+import { LiveOverallStatusBadge } from "@/components/businesses/live-overall-status-badge";
 import { EntityListTable } from "@/components/domain/entity-list-table";
 import { PaymentProgress } from "@/components/domain/payment-progress";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,9 @@ import { Input } from "@/components/ui/input";
 import { renewalTypeLabel } from "@/lib/constants/labels";
 import { formatDateDisplay } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
+import { useProjectStore } from "@/store/use-project-store";
+import { useTaskStore } from "@/store/use-task-store";
+import type { Project, Task } from "@/types";
 
 function matchesQuery(row: ClientListRow, query: string): boolean {
   if (query.trim().length === 0) return true;
@@ -27,7 +30,23 @@ function matchesQuery(row: ClientListRow, query: string): boolean {
   return haystack.includes(query.trim().toLowerCase());
 }
 
-export function ClientsBoard({ rows }: { rows: ClientListRow[] }) {
+interface ClientsBoardProps {
+  rows: ClientListRow[];
+  /** Snapshots globais do servidor — só para semear as stores se ainda não estiverem inicializadas (D7). */
+  initialProjects: Project[];
+  initialTasks: Task[];
+}
+
+export function ClientsBoard({ rows, initialProjects, initialTasks }: ClientsBoardProps) {
+  const initializeProjects = useProjectStore((state) => state.initialize);
+  const initializeTasks = useTaskStore((state) => state.initialize);
+
+  useEffect(() => {
+    initializeProjects(initialProjects);
+    initializeTasks(initialTasks);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ClientFilter>("all");
 
@@ -69,7 +88,9 @@ export function ClientsBoard({ rows }: { rows: ClientListRow[] }) {
       <EntityListTable
         rows={filteredRows}
         rowKey={(row) => row.summary.business.id}
-        renderMobileCard={(row) => <BusinessCard row={row} />}
+        renderMobileCard={(row) => (
+          <BusinessCard row={row} initialProjects={initialProjects} initialTasks={initialTasks} />
+        )}
         emptyState={
           <EmptyState
             title="Nenhum cliente encontrado"
@@ -91,7 +112,15 @@ export function ClientsBoard({ rows }: { rows: ClientListRow[] }) {
           },
           {
             header: "Estado",
-            cell: (row) => <BusinessOverallStatusBadge status={row.summary.overallStatus} />,
+            cell: (row) => (
+              <LiveOverallStatusBadge
+                projectIds={row.projectIds}
+                taskIds={row.taskIds}
+                maintenanceRequests={row.maintenanceRequests}
+                initialProjects={initialProjects}
+                initialTasks={initialTasks}
+              />
+            ),
           },
           {
             header: "Projetos",

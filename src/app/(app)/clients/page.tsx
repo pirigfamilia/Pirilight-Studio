@@ -5,6 +5,11 @@ import {
   RENEWALS_PANEL_WINDOW_DAYS,
   getBusinessSummaries,
   getClientBusinesses,
+  getMaintenanceRequestsByBusinessId,
+  getProjects,
+  getProjectsByBusinessId,
+  getTasks,
+  getTasksByBusinessId,
   getUsers,
 } from "@/lib/data";
 import { diffCalendarDays, todayIso } from "@/lib/utils/date";
@@ -15,24 +20,39 @@ export const dynamic = "force-dynamic";
 export default async function ClientsPage() {
   const now = new Date();
   const businesses = await getClientBusinesses(now);
-  const [summaries, users] = await Promise.all([
+  const [summaries, users, allProjects, allTasks] = await Promise.all([
     getBusinessSummaries(businesses, now),
     getUsers(now),
+    getProjects(now),
+    getTasks(now),
   ]);
 
   const nameByUserId = new Map(users.map((user) => [user.id, user.name]));
   const today = todayIso(now);
 
-  const rows: ClientListRow[] = summaries.map((summary) => ({
-    summary,
-    responsibleName: summary.responsibleUserId
-      ? (nameByUserId.get(summary.responsibleUserId) ?? null)
-      : null,
-    hasPendingPayment: summary.paymentSummary.remainingValue > 0,
-    hasUpcomingRenewal:
-      summary.nextRenewal !== null &&
-      diffCalendarDays(summary.nextRenewal.dueDate, today) <= RENEWALS_PANEL_WINDOW_DAYS,
-  }));
+  const rows: ClientListRow[] = await Promise.all(
+    summaries.map(async (summary) => {
+      const [projects, tasks, maintenanceRequests] = await Promise.all([
+        getProjectsByBusinessId(summary.business.id, now),
+        getTasksByBusinessId(summary.business.id, now),
+        getMaintenanceRequestsByBusinessId(summary.business.id, now),
+      ]);
+
+      return {
+        summary,
+        responsibleName: summary.responsibleUserId
+          ? (nameByUserId.get(summary.responsibleUserId) ?? null)
+          : null,
+        hasPendingPayment: summary.paymentSummary.remainingValue > 0,
+        hasUpcomingRenewal:
+          summary.nextRenewal !== null &&
+          diffCalendarDays(summary.nextRenewal.dueDate, today) <= RENEWALS_PANEL_WINDOW_DAYS,
+        projectIds: projects.map((p) => p.id),
+        taskIds: tasks.map((t) => t.id),
+        maintenanceRequests,
+      };
+    }),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -40,7 +60,7 @@ export default async function ClientsPage() {
         title="Clientes"
         description="Clientes, projetos, pagamentos e renovações num só lugar."
       />
-      <ClientsBoard rows={rows} />
+      <ClientsBoard rows={rows} initialProjects={allProjects} initialTasks={allTasks} />
     </div>
   );
 }

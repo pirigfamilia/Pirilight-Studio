@@ -29,6 +29,9 @@ interface TaskFormDialogProps {
   businesses: Business[];
   projects: Project[];
   users: User[];
+  /** Só em modo criação (Round 5) — pré-seleciona Negócio/Projeto ao abrir a partir do Website/PiriCard Detail. */
+  defaultBusinessId?: string;
+  defaultProjectId?: string;
 }
 
 interface FormState {
@@ -53,6 +56,8 @@ function buildInitialState(
   users: User[],
   businesses: Business[],
   projects: Project[],
+  defaultBusinessId: string,
+  defaultProjectId: string,
 ): { form: FormState; relation: InitialRelation } {
   if (task === undefined) {
     return {
@@ -64,8 +69,8 @@ function buildInitialState(
         waitingReason: null,
         priority: "normal",
         dueDate: "",
-        businessId: "",
-        projectId: "",
+        businessId: defaultBusinessId,
+        projectId: defaultProjectId,
       },
     };
   }
@@ -113,12 +118,21 @@ function computeRelation(
  * limpo. É mais simples e mais previsível do que sincronizar props para
  * estado num `useEffect`.
  */
-export function TaskFormDialog({ open, onOpenChange, task, businesses, projects, users }: TaskFormDialogProps) {
+export function TaskFormDialog({
+  open,
+  onOpenChange,
+  task,
+  businesses,
+  projects,
+  users,
+  defaultBusinessId = "",
+  defaultProjectId = "",
+}: TaskFormDialogProps) {
   const createTask = useTaskStore((state) => state.createTask);
   const updateTask = useTaskStore((state) => state.updateTask);
 
   const [{ form, relation: initialRelation }, setState] = useState(() =>
-    buildInitialState(task, users, businesses, projects),
+    buildInitialState(task, users, businesses, projects, defaultBusinessId, defaultProjectId),
   );
   const formId = useId();
 

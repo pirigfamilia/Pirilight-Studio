@@ -1,11 +1,15 @@
 import type {
   BusinessOverallStatus,
+  CardType,
   DealStage,
+  DesignStatus,
   LifecycleStatus,
   PaymentStatus,
   Priority,
   ProjectType,
+  RenewalStatus,
   RenewalType,
+  ShippingStatus,
   Urgency,
   WaitingReason,
   WorkStatus,
@@ -101,6 +105,33 @@ export const BUSINESS_OVERALL_STATUS_LABELS = {
   none: "Sem trabalho ativo",
 } satisfies Record<BusinessOverallStatus, string>;
 
+/** Round 5 — Websites/PiriCards. Só os valores reais do schema (`lib/validation/project.ts`). */
+export const CARD_TYPE_LABELS = {
+  physical: "Físico",
+  digital: "Digital",
+  hybrid: "Híbrido",
+} satisfies Record<CardType, string>;
+
+export const DESIGN_STATUS_LABELS = {
+  not_started: "Por iniciar",
+  in_design: "Em design",
+  approved: "Aprovado",
+} satisfies Record<DesignStatus, string>;
+
+export const SHIPPING_STATUS_LABELS = {
+  not_shipped: "Por preparar",
+  in_production: "Em produção",
+  shipped: "Enviado",
+  delivered: "Entregue",
+} satisfies Record<ShippingStatus, string>;
+
+/** Estado guardado do Renewal (`lib/validation/renewal.ts`) — não inclui `overdue`, que é derivado. */
+export const RENEWAL_STATUS_LABELS = {
+  pending: "Pendente",
+  renewed: "Renovada",
+  cancelled: "Cancelada",
+} satisfies Record<RenewalStatus, string>;
+
 export const URGENCY_LABELS = {
   overdue: "Atrasado",
   due_today: "Hoje",
@@ -138,4 +169,24 @@ export function businessOverallStatusLabel(status: BusinessOverallStatus): strin
 
 export function priorityLabel(priority: Priority): string {
   return PRIORITY_LABELS[priority];
+}
+
+export function projectTypeLabel(type: ProjectType): string {
+  return PROJECT_TYPE_LABELS[type];
+}
+
+export function cardTypeLabel(type: CardType): string {
+  return CARD_TYPE_LABELS[type];
+}
+
+export function designStatusLabel(status: DesignStatus): string {
+  return DESIGN_STATUS_LABELS[status];
+}
+
+export function shippingStatusLabel(status: ShippingStatus): string {
+  return SHIPPING_STATUS_LABELS[status];
+}
+
+export function renewalStatusLabel(status: RenewalStatus): string {
+  return RENEWAL_STATUS_LABELS[status];
 }

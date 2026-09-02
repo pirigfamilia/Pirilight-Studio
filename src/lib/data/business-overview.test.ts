@@ -238,6 +238,14 @@ describe("deriveNextAction", () => {
     });
   });
 
+  it("Round 5: sem openDeal/lifecycleStatus (escopo Project), nunca gera candidato de Deal", () => {
+    const action = deriveNextAction(
+      { tasks: [makeTask({ dueDate: "2026-04-28" })], maintenanceRequests: noMaintenance },
+      TODAY,
+    );
+    expect(action.source).toBe("task");
+  });
+
   it("caso de regressão: Boi na Brasa deve ter uma próxima ação real, não 'Sem ações pendentes'", async () => {
     const overview = await getBusinessOverview(BUSINESS_IDS.boiNaBrasa, TEST_TODAY);
     expect(overview?.nextAction.source).toBe("task");
@@ -249,30 +257,76 @@ describe("deriveNextAction", () => {
 });
 
 describe("deriveBusinessOverallStatus", () => {
+  const noTasks: Task[] = [];
+  const noMaintenance: MaintenanceRequest[] = [];
+
   it("um bloqueio pesa mais do que qualquer outro estado", () => {
     expect(
-      deriveBusinessOverallStatus([
-        makeProject({ status: "in_progress" }),
-        makeProject({ id: "p2", status: "blocked" }),
-      ]),
+      deriveBusinessOverallStatus({
+        projects: [makeProject({ status: "in_progress" }), makeProject({ id: "p2", status: "blocked" })],
+        tasks: noTasks,
+        maintenanceRequests: noMaintenance,
+      }),
     ).toBe("blocked");
   });
 
   it("à espera do cliente pesa mais do que em progresso", () => {
     expect(
-      deriveBusinessOverallStatus([
-        makeProject({ status: "in_progress" }),
-        makeProject({ id: "p2", status: "waiting_on_client" }),
-      ]),
+      deriveBusinessOverallStatus({
+        projects: [
+          makeProject({ status: "in_progress" }),
+          makeProject({ id: "p2", status: "waiting_on_client" }),
+        ],
+        tasks: noTasks,
+        maintenanceRequests: noMaintenance,
+      }),
     ).toBe("waiting_on_client");
   });
 
   it("tudo concluído dá 'done'", () => {
-    expect(deriveBusinessOverallStatus([makeProject({ status: "done" })])).toBe("done");
+    expect(
+      deriveBusinessOverallStatus({
+        projects: [makeProject({ status: "done" })],
+        tasks: noTasks,
+        maintenanceRequests: noMaintenance,
+      }),
+    ).toBe("done");
   });
 
-  it("sem projetos dá 'none'", () => {
-    expect(deriveBusinessOverallStatus([])).toBe("none");
+  it("sem projetos, tasks nem pedidos dá 'none'", () => {
+    expect(
+      deriveBusinessOverallStatus({ projects: [], tasks: noTasks, maintenanceRequests: noMaintenance }),
+    ).toBe("none");
+  });
+
+  it("Round 5: uma Task waiting_on_client sem projetos abertos já não é 'Sem trabalho ativo' — é 'waiting_on_client'", () => {
+    // Caso real: Óptica Visão Clara não tem nenhum projeto, mas tem uma Task
+    // waiting_on_client ativa. Antes desta correção o resultado seria 'none'
+    // (lido como "Sem trabalho ativo"), o que contradiz o princípio central —
+    // há mesmo alguma coisa a acontecer, só que não depende de nós agora.
+    expect(
+      deriveBusinessOverallStatus({
+        projects: [],
+        tasks: [makeTask({ status: "waiting_on_client", waitingReason: "content" })],
+        maintenanceRequests: noMaintenance,
+      }),
+    ).toBe("waiting_on_client");
+  });
+
+  it("Round 5: um MaintenanceRequest bloqueado pesa mesmo sem nenhum Project bloqueado", () => {
+    expect(
+      deriveBusinessOverallStatus({
+        projects: [makeProject({ status: "in_progress" })],
+        tasks: noTasks,
+        maintenanceRequests: [makeMaintenanceRequest({ status: "blocked" })],
+      }),
+    ).toBe("blocked");
+  });
+
+  it("Round 5: caso real — a Óptica Visão Clara deixa de mostrar 'Sem trabalho ativo'", async () => {
+    const overview = await getBusinessOverview(BUSINESS_IDS.optica, TEST_TODAY);
+    expect(overview?.projects).toHaveLength(0);
+    expect(overview?.overallStatus).toBe("waiting_on_client");
   });
 });
 

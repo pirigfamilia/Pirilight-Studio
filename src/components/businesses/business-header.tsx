@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
+import { LiveOverallStatusBadge } from "@/components/businesses/live-overall-status-badge";
 import { NextActionStat } from "@/components/businesses/next-action-stat";
-import { BusinessOverallStatusBadge } from "@/components/domain/business-overall-status-badge";
 import { LifecycleStatusBadge } from "@/components/domain/lifecycle-status-badge";
-import type { BusinessOverview, Task, User } from "@/types";
+import type { BusinessOverview, Project, Task, User } from "@/types";
 
 function HeaderStat({ label, value, extra }: { label: string; value: string; extra?: ReactNode }) {
   return (
@@ -24,15 +24,20 @@ export function BusinessHeader({
   overview,
   responsible,
   allTasks,
+  allProjects,
   today,
 }: {
   overview: BusinessOverview;
   responsible: User | undefined;
   /** Snapshot global do servidor — só para semear a `useTaskStore`, ver `NextActionStat`. */
   allTasks: Task[];
+  /** Snapshot global do servidor — só para semear a `useProjectStore`, ver `LiveOverallStatusBadge`. */
+  allProjects: Project[];
   today: string;
 }) {
   const { business, primaryContact } = overview;
+  const projectIds = overview.projects.map((item) => item.project.id);
+  const taskIds = overview.tasks.map((task) => task.id);
 
   return (
     <div className="flex flex-col gap-5 border-b border-border pb-6">
@@ -46,7 +51,14 @@ export function BusinessHeader({
             {business.industry} · {business.location}
           </p>
         </div>
-        <BusinessOverallStatusBadge status={overview.overallStatus} className="text-sm" />
+        <LiveOverallStatusBadge
+          projectIds={projectIds}
+          taskIds={taskIds}
+          maintenanceRequests={overview.maintenanceRequests}
+          initialProjects={allProjects}
+          initialTasks={allTasks}
+          className="text-sm"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

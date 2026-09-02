@@ -21,12 +21,14 @@ interface TaskListSectionProps {
   onEdit: (task: Task) => void;
   /** `/tasks` mostra o negócio de cada linha; a tab do Business Detail já está scoped a um só, não repete. */
   showBusiness?: boolean;
+  /** Website/PiriCard Detail já estão scoped a um só projeto — o nome seria sempre igual, por isso omite-se. */
+  showProject?: boolean;
   /** "Concluídas" vem colapsada por defeito — mesmo padrão do "Fechados" em Comercial (Round 3.1). */
   collapsible?: boolean;
 }
 
-function contextLine(item: TaskWithDetail, showBusiness: boolean): string | null {
-  const parts = [showBusiness ? item.businessName : null, item.projectName].filter(
+function contextLine(item: TaskWithDetail, showBusiness: boolean, showProject: boolean): string | null {
+  const parts = [showBusiness ? item.businessName : null, showProject ? item.projectName : null].filter(
     (part): part is string => part !== null,
   );
   return parts.length > 0 ? parts.join(" · ") : null;
@@ -44,6 +46,7 @@ export function TaskListSection({
   userById,
   onEdit,
   showBusiness = true,
+  showProject = true,
   collapsible = false,
 }: TaskListSectionProps) {
   const [expanded, setExpanded] = useState(!collapsible);
@@ -56,8 +59,10 @@ export function TaskListSection({
       cell: (item) => (
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">{item.task.title}</p>
-          {contextLine(item, showBusiness) && (
-            <p className="truncate text-xs text-muted-foreground">{contextLine(item, showBusiness)}</p>
+          {contextLine(item, showBusiness, showProject) && (
+            <p className="truncate text-xs text-muted-foreground">
+              {contextLine(item, showBusiness, showProject)}
+            </p>
           )}
           {item.task.waitingReason !== null && (
             <WaitingReasonTag reason={item.task.waitingReason} className="mt-1" />
@@ -110,7 +115,14 @@ export function TaskListSection({
           rowKey={(item) => item.task.id}
           columns={columns}
           renderMobileCard={(item) => (
-            <TaskCard item={item} today={today} userById={userById} onEdit={onEdit} showBusiness={showBusiness} />
+            <TaskCard
+              item={item}
+              today={today}
+              userById={userById}
+              onEdit={onEdit}
+              showBusiness={showBusiness}
+              showProject={showProject}
+            />
           )}
         />
       )}
@@ -137,14 +149,16 @@ function TaskCard({
   userById,
   onEdit,
   showBusiness,
+  showProject,
 }: {
   item: TaskWithDetail;
   today: string;
   userById: Map<string, User>;
   onEdit: (task: Task) => void;
   showBusiness: boolean;
+  showProject: boolean;
 }) {
-  const context = contextLine(item, showBusiness);
+  const context = contextLine(item, showBusiness, showProject);
 
   return (
     <Card className="p-3.5">

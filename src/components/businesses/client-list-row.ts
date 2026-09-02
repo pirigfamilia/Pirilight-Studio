@@ -1,4 +1,4 @@
-import type { BusinessSummary } from "@/types";
+import type { BusinessSummary, MaintenanceRequest } from "@/types";
 
 /**
  * Uma linha da lista de Clientes — o `BusinessSummary` já com os campos
@@ -10,6 +10,16 @@ export interface ClientListRow {
   responsibleName: string | null;
   hasPendingPayment: boolean;
   hasUpcomingRenewal: boolean;
+  /**
+   * D7 (Round 5) — pré-resolvidos no servidor via `getProjectsByBusinessId`/
+   * `getTasksByBusinessId` (que já sabe resolver os 5 tipos de relação
+   * polimórfica). O cliente só filtra `useProjectStore`/`useTaskStore` por
+   * estes ids — nunca leva Business/Project/Deal globais para `ClientsBoard`.
+   */
+  projectIds: string[];
+  taskIds: string[];
+  /** Já scoped a este negócio — nunca mutado nesta fase. */
+  maintenanceRequests: MaintenanceRequest[];
 }
 
 export type ClientFilter = "all" | "website" | "piricard" | "pendingPayment" | "upcomingRenewal";

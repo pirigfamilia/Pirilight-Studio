@@ -12,10 +12,15 @@ export function NewTaskButton({
   businesses,
   projects,
   users,
+  defaultBusinessId,
+  defaultProjectId,
 }: {
   businesses: Business[];
   projects: Project[];
   users: User[];
+  /** Round 5 — pré-seleção quando usado a partir do Website/PiriCard Detail. */
+  defaultBusinessId?: string;
+  defaultProjectId?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -31,6 +36,8 @@ export function NewTaskButton({
         businesses={businesses}
         projects={projects}
         users={users}
+        defaultBusinessId={defaultBusinessId}
+        defaultProjectId={defaultProjectId}
       />
     </>
   );

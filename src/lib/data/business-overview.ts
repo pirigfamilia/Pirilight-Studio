@@ -39,16 +39,30 @@ import { getTasksByBusinessId } from "./tasks";
  */
 
 /**
- * O estado mais importante a saber sobre um negócio agora, derivado dos seus
- * projetos — nunca guardado. Um bloqueio pesa mais do que "à espera", que
- * pesa mais do que "em progresso": é a mesma prioridade que rege o feed de
- * atenção, aplicada ao nível do negócio.
+ * O estado mais importante a saber sobre um negócio agora — nunca guardado.
+ * Considera Projects, Tasks e MaintenanceRequests ligados ao negócio, não só
+ * Projects: um negócio com uma Task `waiting_on_client` ativa mas sem
+ * projetos em aberto tem mesmo alguma coisa a acontecer, e "Sem trabalho
+ * ativo" seria falso. Um bloqueio pesa mais do que "à espera", que pesa mais
+ * do que "em progresso" — a mesma prioridade que rege o feed de atenção,
+ * aplicada ao nível do negócio, agora across as três origens.
  */
-export function deriveBusinessOverallStatus(projects: readonly Project[]): BusinessOverallStatus {
-  if (projects.length === 0) return "none";
-  if (projects.some((p) => p.status === "blocked")) return "blocked";
-  if (projects.some((p) => p.status === "waiting_on_client")) return "waiting_on_client";
-  if (projects.some((p) => p.status === "in_progress" || p.status === "todo")) return "in_progress";
+export function deriveBusinessOverallStatus(input: {
+  projects: readonly Project[];
+  tasks: readonly Task[];
+  maintenanceRequests: readonly MaintenanceRequest[];
+}): BusinessOverallStatus {
+  const { projects, tasks, maintenanceRequests } = input;
+  const statuses = [
+    ...projects.map((p) => p.status),
+    ...tasks.map((t) => t.status),
+    ...maintenanceRequests.map((m) => m.status),
+  ];
+
+  if (statuses.length === 0) return "none";
+  if (statuses.some((s) => s === "blocked")) return "blocked";
+  if (statuses.some((s) => s === "waiting_on_client")) return "waiting_on_client";
+  if (statuses.some((s) => s === "in_progress" || s === "todo")) return "in_progress";
   return "done";
 }
 
@@ -152,6 +166,11 @@ interface NextActionCandidate {
  * sem urgência); aqui uma data distante ainda tem de poder perder para um
  * Deal `stalled`, o que só a classificação em 5 valores permite.
  *
+ * `openDeal`/`lifecycleStatus` são opcionais: um Project (Round 5) não tem
+ * Deal nem `lifecycleStatus` próprios, só Tasks/MaintenanceRequests ligados a
+ * ele — omitir os dois campos simplesmente não gera candidato de Deal, sem
+ * mudar o comportamento de quem já os passa (Business Detail).
+ *
  * Regras já aprovadas, preservadas por construção: um Project
  * `waiting_on_client` sozinho nunca entra (não há input de Project aqui); uma
  * Task `waiting_on_client` não é trabalho nosso (excluída); um Deal
@@ -162,8 +181,8 @@ export function deriveNextAction(
   input: {
     tasks: readonly Task[];
     maintenanceRequests: readonly MaintenanceRequest[];
-    openDeal: Deal | null;
-    lifecycleStatus: LifecycleStatus;
+    openDeal?: Deal | null;
+    lifecycleStatus?: LifecycleStatus;
   },
   today: string,
 ): NextAction {
@@ -212,8 +231,9 @@ export function deriveNextAction(
     }
   }
 
-  if (input.openDeal !== null && input.lifecycleStatus !== "inactive") {
-    const deal = input.openDeal;
+  const openDeal = input.openDeal ?? null;
+  if (openDeal !== null && input.lifecycleStatus !== "inactive") {
+    const deal = openDeal;
 
     if (deal.nextActionDate !== null) {
       const { urgency, daysDelta } = classifyForRanking(deal.nextActionDate, today);
@@ -303,12 +323,13 @@ export async function getBusinessSummary(
   business: Business,
   now: Date = new Date(),
 ): Promise<BusinessSummary> {
-  const [projects, payments, renewals, tasks, deals] = await Promise.all([
+  const [projects, payments, renewals, tasks, deals, maintenanceRequests] = await Promise.all([
     getProjectsByBusinessId(business.id, now),
     getPaymentsByBusinessId(business.id, now),
     getRenewalsByBusinessId(business.id, now),
     getTasksByBusinessId(business.id, now),
     getDealsByBusinessId(business.id, now),
+    getMaintenanceRequestsByBusinessId(business.id, now),
   ]);
 
   const pendingRenewals = renewals
@@ -320,7 +341,7 @@ export async function getBusinessSummary(
     activeProjectsCount: projects.filter((p) => p.status !== "done").length,
     hasWebsite: projects.some((p) => p.type === "website"),
     hasPiriCard: projects.some((p) => p.type === "piricard"),
-    overallStatus: deriveBusinessOverallStatus(projects),
+    overallStatus: deriveBusinessOverallStatus({ projects, tasks, maintenanceRequests }),
     paymentSummary: summarizePayments(payments, todayIso(now)),
     nextRenewal: pendingRenewals[0] ?? null,
     openTasksCount: tasks.filter((t) => t.status !== "done" && t.status !== "waiting_on_client")
@@ -374,7 +395,7 @@ export async function getBusinessOverview(
     payments,
     paymentSummary: summarizePayments(payments, today),
     responsibleUserId: deriveResponsibleUserId(deals),
-    overallStatus: deriveBusinessOverallStatus(projects),
+    overallStatus: deriveBusinessOverallStatus({ projects, tasks, maintenanceRequests }),
     nextAction: deriveNextAction(
       { tasks, maintenanceRequests, openDeal, lifecycleStatus: business.lifecycleStatus },
       today,

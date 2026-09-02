@@ -1,19 +1,30 @@
-import { CreditCard } from "lucide-react";
-
 import { PageHeader } from "@/components/layout/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ProjectsBoard } from "@/components/projects/projects-board";
+import { getPiriCardsBoard, getProjects, getTasks, getUsers } from "@/lib/data";
+import { todayIso } from "@/lib/utils/date";
 
-export default function PiriCardsPage() {
+// Pagamentos e renovações dependem do dia de hoje — sem prerender estático.
+export const dynamic = "force-dynamic";
+
+export default async function PiriCardsPage() {
+  const now = new Date();
+  const [rows, projects, tasks, users] = await Promise.all([
+    getPiriCardsBoard(now),
+    getProjects(now),
+    getTasks(now),
+    getUsers(now),
+  ]);
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="PiriCards"
-        description="Os projetos PiriCard, do design à entrega."
-      />
-      <EmptyState
-        icon={CreditCard}
-        title="A estrutura está pronta"
-        description="A lista de PiriCards, com o estado de produção e o ponto de pagamento, chega no próximo passo do plano."
+      <PageHeader title="PiriCards" description="Os projetos PiriCard, do design à entrega." />
+      <ProjectsBoard
+        type="piricard"
+        initialRows={rows}
+        initialProjects={projects}
+        initialTasks={tasks}
+        users={users}
+        today={todayIso(now)}
       />
     </div>
   );

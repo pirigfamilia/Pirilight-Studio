@@ -209,3 +209,40 @@ export interface TaskWithDetail {
   projectId: string | null;
   projectName: string | null;
 }
+
+/**
+ * Uma linha de `/websites` ou `/piricards` — um Project com o Business já
+ * junto (para o link) e os mesmos derivados que o Business Detail já usa
+ * (pagamento, próxima renovação, tarefas abertas, próxima ação), calculados
+ * pela mesma `buildProjectListRow` reaproveitada nos dois sítios: no servidor
+ * (`getWebsitesBoard`/`getPiriCardsBoard`) e no cliente (`ProjectsBoard`,
+ * quando o estado do Project ou as Tasks mudam na `useProjectStore`/
+ * `useTaskStore`) — nunca duas implementações divergentes da mesma regra.
+ */
+export interface ProjectListRow {
+  project: Project;
+  business: Business;
+  website: Website | null;
+  piriCard: PiriCard | null;
+  /** Responsável do Project = responsável do Business (D3 do Round 5) — nunca um campo próprio. */
+  responsibleUserId: string | null;
+  paymentSummary: PaymentSummary;
+  nextRenewal: Renewal | null;
+  openTasksCount: number;
+  /** A próxima ação real deste projeto — `deriveNextAction`, sem candidato de Deal. */
+  nextAction: NextAction;
+  /**
+   * Pequeno e já scoped a este projeto — nunca mutado nesta fase. Vai na
+   * própria linha (em vez de só no `ProjectOverview`) para `ProjectsBoard`
+   * poder recalcular `nextAction`/`openTasksCount` ao vivo quando as Tasks
+   * mudam na `useTaskStore`, sem precisar de outra leitura.
+   */
+  maintenanceRequests: MaintenanceRequest[];
+}
+
+/** Tudo o que o Website/PiriCard Detail precisa, numa só leitura composta. */
+export interface ProjectOverview extends ProjectListRow {
+  tasks: Task[];
+  renewals: Renewal[];
+  payments: Payment[];
+}

@@ -73,4 +73,6 @@ export type {
   RankedUrgency,
   NextAction,
   TaskWithDetail,
+  ProjectListRow,
+  ProjectOverview,
 } from "./views";

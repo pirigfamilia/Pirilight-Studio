@@ -4,9 +4,12 @@ import type { BusinessOverallStatus } from "@/types";
 
 /**
  * O estado mais importante a saber sobre um negócio agora — derivado dos seus
- * projetos (`deriveBusinessOverallStatus`, `lib/data/business-overview.ts`),
- * nunca guardado. Usada na lista de Clientes e no cabeçalho do Business
- * Detail Hub: é o mesmo resumo, visto dos dois sítios.
+ * projetos, tarefas e pedidos de manutenção (`deriveBusinessOverallStatus`,
+ * `lib/data/business-overview.ts`), nunca guardado. Usada na lista de
+ * Clientes e no cabeçalho do Business Detail Hub: é o mesmo resumo, visto dos
+ * dois sítios. Desde o Round 5 já não é só sobre Projects: um negócio sem
+ * projetos mas com uma Task `waiting_on_client` ativa também não está "Sem
+ * trabalho ativo".
  */
 const VARIANT_BY_STATUS: Record<BusinessOverallStatus, BadgeProps["variant"]> = {
   blocked: "destructive",

@@ -5,7 +5,7 @@ import { BusinessDetailTabs } from "@/components/businesses/business-detail-tabs
 import { BusinessHeader } from "@/components/businesses/business-header";
 import { BusinessTasksTab } from "@/components/businesses/business-tasks-tab";
 import { DealHistoryRow } from "@/components/businesses/deal-history-row";
-import { ProjectSummaryCard } from "@/components/businesses/project-summary-card";
+import { LiveProjectsTab } from "@/components/businesses/live-projects-tab";
 import { FollowUpStatus } from "@/components/domain/follow-up-status";
 import { PaymentProgress } from "@/components/domain/payment-progress";
 import { WaitingReasonTag } from "@/components/domain/waiting-reason-tag";
@@ -18,6 +18,7 @@ import {
   RENEWALS_PANEL_WINDOW_DAYS,
   classifyUrgency,
   getBusinessOverview,
+  getProjects,
   getTasks,
   getUsers,
 } from "@/lib/data";
@@ -48,7 +49,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   const overview = await getBusinessOverview(businessId, now);
   if (overview === null) notFound();
 
-  const [users, allTasks] = await Promise.all([getUsers(now), getTasks(now)]);
+  const [users, allTasks, allProjects] = await Promise.all([getUsers(now), getTasks(now), getProjects(now)]);
   const userById = new Map(users.map((user) => [user.id, user]));
   const today = todayIso(now);
   const responsible = overview.responsibleUserId ? userById.get(overview.responsibleUserId) : undefined;
@@ -62,7 +63,11 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       label: "Comercial",
       content: <CommercialTab overview={overview} userById={userById} today={today} />,
     },
-    { value: "projects", label: "Projetos", content: <ProjectsTab overview={overview} /> },
+    {
+      value: "projects",
+      label: "Projetos",
+      content: <LiveProjectsTab projects={overview.projects} initialProjects={allProjects} />,
+    },
     { value: "renewals", label: "Renovações", content: <RenewalsTab overview={overview} today={today} /> },
     {
       value: "tasks",
@@ -87,7 +92,13 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
 
   return (
     <div className="flex flex-col gap-6">
-      <BusinessHeader overview={overview} responsible={responsible} allTasks={allTasks} today={today} />
+      <BusinessHeader
+        overview={overview}
+        responsible={responsible}
+        allTasks={allTasks}
+        allProjects={allProjects}
+        today={today}
+      />
       <BusinessDetailTabs tabs={tabs} defaultValue={defaultTab} />
     </div>
   );
@@ -246,20 +257,6 @@ function CommercialTab({
           responsible={userById.get(deal.responsibleUserId)}
           today={today}
         />
-      ))}
-    </div>
-  );
-}
-
-function ProjectsTab({ overview }: { overview: BusinessOverview }) {
-  if (overview.projects.length === 0) {
-    return <EmptyState title="Sem projetos" description="Ainda não há Websites ou PiriCards associados a este negócio." />;
-  }
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {overview.projects.map((item) => (
-        <ProjectSummaryCard key={item.project.id} item={item} />
       ))}
     </div>
   );

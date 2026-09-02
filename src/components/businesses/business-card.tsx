@@ -2,15 +2,23 @@ import Link from "next/link";
 import { CreditCard, Globe } from "lucide-react";
 
 import type { ClientListRow } from "@/components/businesses/client-list-row";
-import { BusinessOverallStatusBadge } from "@/components/domain/business-overall-status-badge";
+import { LiveOverallStatusBadge } from "@/components/businesses/live-overall-status-badge";
 import { PaymentProgress } from "@/components/domain/payment-progress";
 import { Card } from "@/components/ui/card";
 import { formatDateDisplay } from "@/lib/utils/format";
 import { renewalTypeLabel } from "@/lib/constants/labels";
 import { cn } from "@/lib/utils";
+import type { Project, Task } from "@/types";
+
+interface BusinessCardProps {
+  row: ClientListRow;
+  /** Snapshots globais do servidor — repassados ao `LiveOverallStatusBadge` (D7). */
+  initialProjects: Project[];
+  initialTasks: Task[];
+}
 
 /** Cartão de negócio — a vista mobile da lista de Clientes (a tabela vira isto abaixo de `md`). */
-export function BusinessCard({ row }: { row: ClientListRow }) {
+export function BusinessCard({ row, initialProjects, initialTasks }: BusinessCardProps) {
   const { summary, responsibleName } = row;
   const { business, nextRenewal } = summary;
 
@@ -24,7 +32,13 @@ export function BusinessCard({ row }: { row: ClientListRow }) {
             </p>
             <p className="truncate text-xs text-muted-foreground">{business.industry}</p>
           </div>
-          <BusinessOverallStatusBadge status={summary.overallStatus} />
+          <LiveOverallStatusBadge
+            projectIds={row.projectIds}
+            taskIds={row.taskIds}
+            maintenanceRequests={row.maintenanceRequests}
+            initialProjects={initialProjects}
+            initialTasks={initialTasks}
+          />
         </div>
       </Link>
 
