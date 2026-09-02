@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
-import { FollowUpStatus } from "@/components/domain/follow-up-status";
+import { NextActionTiming } from "@/components/domain/next-action-timing";
 import { PaymentProgress } from "@/components/domain/payment-progress";
 import { WaitingReasonTag } from "@/components/domain/waiting-reason-tag";
 import { WorkStatusBadge } from "@/components/domain/work-status-badge";
@@ -239,11 +239,10 @@ function NextActionCell({ nextAction }: { nextAction: NextAction }) {
   if (nextAction.source === "none") {
     return <span className="text-xs text-muted-foreground">Sem ações pendentes</span>;
   }
-  const followUpUrgency = nextAction.urgency === "future" ? null : nextAction.urgency;
   return (
     <div className="flex flex-col gap-0.5">
       <span className="truncate text-xs text-foreground">{nextAction.title}</span>
-      <FollowUpStatus urgency={followUpUrgency} daysDelta={nextAction.daysDelta} />
+      <NextActionTiming nextAction={nextAction} />
     </div>
   );
 }

@@ -17,6 +17,7 @@ import {
   getBusinessSummaries,
   getCommercialPipeline,
   pickOpenDeal,
+  toFollowUpUrgency,
 } from "./business-overview";
 
 const audit = { createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
@@ -255,6 +256,95 @@ describe("deriveNextAction", () => {
     // é literalmente a Task "Insistir pelas fotografias", ligada ao projeto
     // waiting_on_client — não o projeto em si.
     expect(overview?.tasks.some((t) => t.id === TASK_IDS.boiNaBrasaChasePhotos)).toBe(true);
+  });
+
+  it("Round 5.2 — caso de regressão: uma Task aberta sem dueDate nunca é 'Sem ações pendentes' (caso Café Central)", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [makeTask({ dueDate: null, status: "todo" })],
+        maintenanceRequests: noMaintenance,
+        openDeal: null,
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("task");
+    expect(action.title).toBe("Tarefa");
+    expect(action.urgency).toBe("no_date");
+    expect(action.date).toBeNull();
+    expect(action.daysDelta).toBeNull();
+  });
+
+  it("Round 5.2 — uma Task sem data tem prioridade inferior a qualquer trabalho com data ou stalled", () => {
+    const withDatedDeal = deriveNextAction(
+      {
+        tasks: [makeTask({ id: "sem-data", dueDate: null })],
+        maintenanceRequests: noMaintenance,
+        openDeal: makeDeal({ nextActionDate: "2026-04-28" }), // +30 dias, "future" — ainda tem data
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(withDatedDeal.source).toBe("deal"); // "future" (tem data) vence "no_date"
+
+    const withStalledDeal = deriveNextAction(
+      {
+        tasks: [makeTask({ id: "sem-data", dueDate: null })],
+        maintenanceRequests: noMaintenance,
+        openDeal: makeDeal({
+          nextAction: null,
+          nextActionDate: null,
+          lastInteractionDate: "2026-03-09", // 20 dias sem contacto → stalled
+        }),
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(withStalledDeal.source).toBe("deal"); // stalled vence "no_date"
+  });
+
+  it("Round 5.2 — uma Task sem data continua a vencer 'Sem ações pendentes'", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [makeTask({ dueDate: null })],
+        maintenanceRequests: noMaintenance,
+        openDeal: null,
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).not.toBe("none");
+  });
+
+  it("Round 5.2 — uma Task waiting_on_client sem data continua excluída (não vira 'no_date')", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [makeTask({ status: "waiting_on_client", waitingReason: "content", dueDate: null })],
+        maintenanceRequests: noMaintenance,
+        openDeal: null,
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("none");
+  });
+});
+
+describe("toFollowUpUrgency (Round 5.2)", () => {
+  it("'future' e 'no_date' não têm cor de urgência própria — ambos viram null", () => {
+    expect(toFollowUpUrgency("future")).toBeNull();
+    expect(toFollowUpUrgency("no_date")).toBeNull();
+  });
+
+  it("os 4 valores partilhados com Urgency passam tal e qual", () => {
+    expect(toFollowUpUrgency("overdue")).toBe("overdue");
+    expect(toFollowUpUrgency("due_today")).toBe("due_today");
+    expect(toFollowUpUrgency("due_soon")).toBe("due_soon");
+    expect(toFollowUpUrgency("stalled")).toBe("stalled");
+  });
+
+  it("null continua null", () => {
+    expect(toFollowUpUrgency(null)).toBeNull();
   });
 });
 

@@ -134,6 +134,7 @@ const NEXT_ACTION_RANK: Record<RankedUrgency, number> = {
   due_soon: 2,
   stalled: 3,
   future: 4,
+  no_date: 5,
 };
 
 /** `due_soon` fica limitado a esta janela; para além disso é só `future`. */
@@ -166,7 +167,8 @@ interface NextActionCandidate {
   title: string;
   date: string | null;
   urgency: RankedUrgency;
-  daysDelta: number;
+  /** `null` só para `no_date` — sem dueDate não há um "dias de diferença" para mostrar. */
+  daysDelta: number | null;
   /** Chave de desempate dentro do mesmo nível de urgência — a mais antiga vence. */
   sortDate: string;
 }
@@ -210,7 +212,22 @@ export function deriveNextAction(
 
   for (const task of input.tasks) {
     if (task.status === "done" || task.status === "waiting_on_client") continue;
-    if (task.dueDate === null) continue;
+
+    if (task.dueDate === null) {
+      // Round 5.2: uma Task nossa em aberto sem dueDate ainda é trabalho por
+      // fazer — nunca "nenhuma ação". Fica no último nível (`no_date`), mas
+      // continua a existir como candidata; desempate pela mais antiga criada.
+      candidates.push({
+        source: "task",
+        title: task.title,
+        date: null,
+        urgency: "no_date",
+        daysDelta: null,
+        sortDate: task.createdAt,
+      });
+      continue;
+    }
+
     const { urgency, daysDelta } = classifyForRanking(task.dueDate, today);
     candidates.push({
       source: "task",
@@ -298,6 +315,18 @@ export function deriveNextAction(
     urgency: winner.urgency,
     daysDelta: winner.daysDelta,
   };
+}
+
+/**
+ * Traduz o `RankedUrgency` de `deriveNextAction` (5-6 valores) para o
+ * `Urgency` global de 4 valores que `FollowUpStatus` sabe apresentar.
+ * `future` e `no_date` não têm cor de urgência própria — o componente já
+ * sabe mostrar uma data distante (ou nenhuma) num tom calmo quando recebe
+ * `null`. Extraído para não repetir esta tradução em cada consumidor.
+ */
+export function toFollowUpUrgency(urgency: RankedUrgency | null): Urgency | null {
+  if (urgency === "future" || urgency === "no_date") return null;
+  return urgency;
 }
 
 /** O board Comercial: um card por Deal (inclui Ganho/Perdido — é o histórico do funil). */

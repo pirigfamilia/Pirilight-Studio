@@ -148,12 +148,27 @@ export interface BusinessSummary {
 /**
  * Urgência de ranking usada só por `deriveNextAction` — **não** é o `Urgency`
  * global de `attention-rules.ts`/`getAttentionItems()`, que continua com os
- * seus 4 valores e a sua janela. Aqui há um quinto valor, `future`, e
+ * seus 4 valores e a sua janela. Aqui há valores extra: `future`, e
  * `due_soon` fica limitado a 7 dias — para um Deal genuinamente parado
  * (`stalled`) nunca ficar escondido atrás de uma Task só porque a Task tem
  * uma data, ainda que a 30 dias.
+ *
+ * `no_date` (Round 5.2) é o último nível — um Task/MaintenanceRequest nosso,
+ * em aberto, mas sem `dueDate` e ainda não parado há tempo suficiente para
+ * ser `stalled`. Sem isto, esse trabalho não gerava candidato nenhum e
+ * `deriveNextAction` podia devolver "Sem ações pendentes" com trabalho
+ * genuinamente por fazer — ver o caso de regressão do Café Central. Fica
+ * sempre abaixo de `future` (uma data concreta, mesmo distante, ainda diz
+ * mais do que nenhuma) e nunca é candidato a `AttentionItem`.
  */
-export const RANKED_URGENCIES = ["overdue", "due_today", "due_soon", "stalled", "future"] as const;
+export const RANKED_URGENCIES = [
+  "overdue",
+  "due_today",
+  "due_soon",
+  "stalled",
+  "future",
+  "no_date",
+] as const;
 export type RankedUrgency = (typeof RANKED_URGENCIES)[number];
 
 /**

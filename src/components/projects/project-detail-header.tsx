@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
 
-import { FollowUpStatus } from "@/components/domain/follow-up-status";
+import { NextActionTiming } from "@/components/domain/next-action-timing";
 import { ProjectStatusMenu } from "@/components/projects/project-status-menu";
 import { deriveNextAction } from "@/lib/data/business-overview";
 import { buildTasksWithDetail } from "@/lib/data/task-board";
@@ -68,10 +68,6 @@ export function ProjectDetailHeader({
     [tasksForProject, maintenanceRequests, today],
   );
 
-  // "future" é um ranking interno de deriveNextAction, sem cor de urgência
-  // própria — FollowUpStatus já sabe mostrar uma data distante a cinzento.
-  const followUpUrgency = nextAction.urgency === "future" ? null : nextAction.urgency;
-
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex flex-col gap-1.5">
@@ -88,9 +84,7 @@ export function ProjectDetailHeader({
       <div className="flex flex-col gap-0.5 sm:items-end">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Próxima ação</p>
         <p className="text-sm font-medium text-foreground">{nextAction.title}</p>
-        {nextAction.source !== "none" && (
-          <FollowUpStatus urgency={followUpUrgency} daysDelta={nextAction.daysDelta} />
-        )}
+        {nextAction.source !== "none" && <NextActionTiming nextAction={nextAction} />}
       </div>
     </div>
   );
