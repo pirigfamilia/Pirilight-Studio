@@ -6,7 +6,7 @@ export default function MaintenancePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Maintenance / Pedidos"
+        title="Pedidos de Manutenção"
         description="Pedidos de manutenção e alteração sobre projetos já entregues."
         action={<Badge variant="muted">Em breve</Badge>}
       />

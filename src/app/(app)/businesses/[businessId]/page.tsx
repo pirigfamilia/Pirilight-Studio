@@ -73,7 +73,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
 
   return (
     <div className="flex flex-col gap-6">
-      <BusinessHeader overview={overview} responsible={responsible} today={today} />
+      <BusinessHeader overview={overview} responsible={responsible} />
       <BusinessDetailTabs tabs={tabs} defaultValue={defaultTab} />
     </div>
   );

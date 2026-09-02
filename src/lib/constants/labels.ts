@@ -86,12 +86,19 @@ export const PRIORITY_LABELS = {
 } satisfies Record<Priority, string>;
 
 /** `BusinessOverallStatus` reaproveita o vocabulário do WorkStatus + "none". */
+/**
+ * `done` e `none` propositadamente com o mesmo label: ao nível do Business,
+ * "todos os projetos entregues" e "ainda sem projetos" significam a mesma
+ * coisa — não há trabalho ativo agora. "Concluído" fica reservado para
+ * Project/Task (`WORK_STATUS_LABELS.done`) — aqui leria-se como "já não é
+ * cliente", que é exatamente o que isto não quer dizer.
+ */
 export const BUSINESS_OVERALL_STATUS_LABELS = {
   blocked: WORK_STATUS_LABELS.blocked,
   waiting_on_client: WORK_STATUS_LABELS.waiting_on_client,
   in_progress: WORK_STATUS_LABELS.in_progress,
-  done: WORK_STATUS_LABELS.done,
-  none: "Sem projetos",
+  done: "Sem trabalho ativo",
+  none: "Sem trabalho ativo",
 } satisfies Record<BusinessOverallStatus, string>;
 
 export const URGENCY_LABELS = {

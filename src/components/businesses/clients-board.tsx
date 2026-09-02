@@ -50,7 +50,7 @@ export function ClientsBoard({ rows }: { rows: ClientListRow[] }) {
           />
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:pb-0">
           {CLIENT_FILTERS.map((option) => (
             <Button
               key={option.value}
@@ -58,6 +58,7 @@ export function ClientsBoard({ rows }: { rows: ClientListRow[] }) {
               size="sm"
               variant={filter === option.value ? "secondary" : "outline"}
               onClick={() => setFilter(option.value)}
+              className="shrink-0"
             >
               {option.label}
             </Button>

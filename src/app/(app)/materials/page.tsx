@@ -6,7 +6,7 @@ export default function MaterialsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Materials"
+        title="Materiais"
         description="Materiais comerciais internos e ideias em backlog — incluindo o vídeo profissional do PiriCard."
         action={<Badge variant="muted">Em breve</Badge>}
       />

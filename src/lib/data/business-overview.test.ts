@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import { buildMockData, TEST_TODAY } from "@/lib/mock";
 import { BUSINESS_IDS } from "@/lib/mock/businesses";
 import { DEAL_IDS } from "@/lib/mock/deals";
-import type { Deal, Project } from "@/types";
+import { TASK_IDS } from "@/lib/mock/tasks";
+import type { Deal, MaintenanceRequest, Project, Task } from "@/types";
 
 import {
   computeDealFollowUp,
   deriveBusinessOverallStatus,
+  deriveNextAction,
   deriveResponsibleUserId,
   getBusinessOverview,
   getBusinessSummaries,
@@ -49,6 +51,202 @@ function makeDeal(overrides: Partial<Deal> = {}): Deal {
     ...overrides,
   };
 }
+
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: "task-1",
+    title: "Tarefa",
+    status: "todo",
+    waitingReason: null,
+    priority: "normal",
+    dueDate: "2026-03-29",
+    assigneeId: "sny",
+    relatedEntityType: "business",
+    relatedEntityId: "biz-1",
+    ...audit,
+    ...overrides,
+  };
+}
+
+function makeMaintenanceRequest(overrides: Partial<MaintenanceRequest> = {}): MaintenanceRequest {
+  return {
+    id: "mnt-1",
+    projectId: "proj-1",
+    businessId: "biz-1",
+    title: "Pedido",
+    description: "Descrição",
+    status: "todo",
+    waitingReason: null,
+    priority: "normal",
+    requestedAt: "2026-03-01",
+    dueDate: "2026-03-29",
+    ...audit,
+    ...overrides,
+  };
+}
+
+describe("deriveNextAction", () => {
+  const TODAY = "2026-03-29";
+  const noMaintenance: MaintenanceRequest[] = [];
+
+  it("uma Task atrasada vence uma data futura do Deal — sem prioridade artificial por tipo", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [makeTask({ dueDate: "2026-04-28" })], // +30 dias, "future"
+        maintenanceRequests: noMaintenance,
+        openDeal: makeDeal({ nextActionDate: "2026-03-27" }), // -2 dias, overdue
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("deal");
+    expect(action.urgency).toBe("overdue");
+  });
+
+  it("uma Task para hoje vence um Deal a 3 dias", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [makeTask({ dueDate: TODAY })],
+        maintenanceRequests: noMaintenance,
+        openDeal: makeDeal({ nextActionDate: "2026-04-01" }), // +3 dias, due_soon
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("task");
+    expect(action.urgency).toBe("due_today");
+  });
+
+  it("entre dois atrasados, vence o mais antigo — mesmo sendo o Deal", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [makeTask({ dueDate: "2026-03-28" })], // -1 dia
+        maintenanceRequests: noMaintenance,
+        openDeal: makeDeal({ nextActionDate: "2026-03-25" }), // -4 dias, mais antigo
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("deal");
+    expect(action.daysDelta).toBe(-4);
+  });
+
+  it("um Deal parado há 20 dias vence uma Task a 30 dias — 'stalled' não fica escondido atrás de 'future'", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [makeTask({ dueDate: "2026-04-28" })], // +30 dias, future
+        maintenanceRequests: noMaintenance,
+        openDeal: makeDeal({
+          nextAction: null,
+          nextActionDate: null,
+          lastInteractionDate: "2026-03-09", // 20 dias sem contacto
+        }),
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("deal");
+    expect(action.urgency).toBe("stalled");
+  });
+
+  it("uma Task a 5 dias (due_soon) vence um Deal 'stalled' há 20 dias", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [makeTask({ dueDate: "2026-04-03" })], // +5 dias, due_soon (≤7)
+        maintenanceRequests: noMaintenance,
+        openDeal: makeDeal({
+          nextAction: null,
+          nextActionDate: null,
+          lastInteractionDate: "2026-03-09",
+        }),
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("task");
+    expect(action.urgency).toBe("due_soon");
+  });
+
+  it("entre duas datas futuras distantes, vence a mais próxima", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [makeTask({ dueDate: "2026-04-28" })], // +30 dias
+        maintenanceRequests: noMaintenance,
+        openDeal: makeDeal({ nextActionDate: "2026-04-10" }), // +12 dias — mais próximo
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("deal");
+    expect(action.urgency).toBe("future");
+    expect(action.daysDelta).toBe(12);
+  });
+
+  it("uma Task waiting_on_client não conta como trabalho nosso", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [makeTask({ status: "waiting_on_client", waitingReason: "photos", dueDate: "2026-03-20" })],
+        maintenanceRequests: noMaintenance,
+        openDeal: null,
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("none");
+  });
+
+  it("um Business inactive não gera candidato a partir do Deal", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [],
+        maintenanceRequests: noMaintenance,
+        openDeal: makeDeal({ nextActionDate: "2026-03-20" }),
+        lifecycleStatus: "inactive",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("none");
+  });
+
+  it("um MaintenanceRequest aberto há muito tempo, sem data, entra como stalled", () => {
+    const action = deriveNextAction(
+      {
+        tasks: [],
+        maintenanceRequests: [
+          makeMaintenanceRequest({ dueDate: null, requestedAt: "2026-03-09" }), // 20 dias
+        ],
+        openDeal: null,
+        lifecycleStatus: "client",
+      },
+      TODAY,
+    );
+    expect(action.source).toBe("maintenance");
+    expect(action.urgency).toBe("stalled");
+  });
+
+  it("sem nenhum candidato, devolve 'Sem ações pendentes'", () => {
+    const action = deriveNextAction(
+      { tasks: [], maintenanceRequests: noMaintenance, openDeal: null, lifecycleStatus: "client" },
+      TODAY,
+    );
+    expect(action).toEqual({
+      source: "none",
+      title: "Sem ações pendentes",
+      date: null,
+      urgency: null,
+      daysDelta: null,
+    });
+  });
+
+  it("caso de regressão: Boi na Brasa deve ter uma próxima ação real, não 'Sem ações pendentes'", async () => {
+    const overview = await getBusinessOverview(BUSINESS_IDS.boiNaBrasa, TEST_TODAY);
+    expect(overview?.nextAction.source).toBe("task");
+    expect(overview?.nextAction.urgency).toBe("overdue");
+    // é literalmente a Task "Insistir pelas fotografias", ligada ao projeto
+    // waiting_on_client — não o projeto em si.
+    expect(overview?.tasks.some((t) => t.id === TASK_IDS.boiNaBrasaChasePhotos)).toBe(true);
+  });
+});
 
 describe("deriveBusinessOverallStatus", () => {
   it("um bloqueio pesa mais do que qualquer outro estado", () => {

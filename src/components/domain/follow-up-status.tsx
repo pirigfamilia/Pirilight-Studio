@@ -9,8 +9,11 @@ import type { Urgency } from "@/types";
  * de `computeDealFollowUp` (`lib/data/business-overview.ts`): não reimplementa
  * a regra de urgência, só a apresenta.
  *
- * Contido de propósito: só `overdue` usa vermelho, só `due_today` usa o
- * laranja de marca. `due_soon` e `stalled` ficam em tons calmos.
+ * Contido de propósito: `overdue` e `due_today` usam o laranja de marca
+ * (`--primary`, reservado para ações importantes — ver globals.css) porque um
+ * follow-up em atraso é urgência normal, não uma escalada. Vermelho
+ * (`destructive`) fica reservado só para `Bloqueado`. `due_soon` e `stalled`
+ * ficam em tons calmos.
  */
 interface FollowUpStatusProps {
   urgency: Urgency | null;
@@ -33,7 +36,7 @@ export function FollowUpStatus({ urgency, daysDelta, className }: FollowUpStatus
 
 function describe(urgency: Urgency | null, daysDelta: number | null) {
   if (urgency === "overdue" && daysDelta !== null) {
-    return { icon: AlertTriangle, tone: "text-destructive", text: `Atrasado há ${-daysDelta} dias` };
+    return { icon: AlertTriangle, tone: "text-primary", text: `Atrasado há ${-daysDelta} dias` };
   }
   if (urgency === "due_today") {
     return { icon: Clock, tone: "text-primary", text: "Hoje" };

@@ -12,7 +12,9 @@ const VARIANT_BY_STATUS: Record<BusinessOverallStatus, BadgeProps["variant"]> = 
   blocked: "destructive",
   waiting_on_client: "secondary",
   in_progress: "info",
-  done: "success",
+  // Neutro de propósito — "Sem trabalho ativo" não é uma celebração nem um
+  // problema, só um facto. Nunca `success`: isso leria-se como "terminou".
+  done: "outline",
   none: "outline",
 };
 

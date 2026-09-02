@@ -6,7 +6,7 @@ export default function FinancePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Finance"
+        title="Finanças"
         description="Visão geral simples de pagamentos — total, recebido e em falta."
         action={<Badge variant="muted">Em breve</Badge>}
       />

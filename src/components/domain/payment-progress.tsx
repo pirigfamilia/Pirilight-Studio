@@ -22,7 +22,7 @@ export function PaymentProgress({
 
   const percent = Math.max(0, Math.min(100, Math.round((amountReceived / totalValue) * 100)));
   const isPaid = remainingValue <= 0;
-  const barColor = isPaid ? "bg-success" : hasOverdue ? "bg-destructive" : "bg-info";
+  const barColor = isPaid ? "bg-success" : hasOverdue ? "bg-primary" : "bg-info";
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -39,7 +39,7 @@ export function PaymentProgress({
           {formatEuros(amountReceived)} de {formatEuros(totalValue)}
         </span>
         {!isPaid && (
-          <span className={hasOverdue ? "font-medium text-destructive" : "text-muted-foreground"}>
+          <span className={hasOverdue ? "font-medium text-primary" : "text-muted-foreground"}>
             Em falta {formatEuros(remainingValue)}
           </span>
         )}

@@ -23,6 +23,13 @@ export async function getMaintenanceRequestsByProjectId(
   return read(getMockData(now).maintenanceRequests.filter((m) => m.projectId === projectId));
 }
 
+export async function getMaintenanceRequestsByBusinessId(
+  businessId: string,
+  now: Date = new Date(),
+): Promise<MaintenanceRequest[]> {
+  return read(getMockData(now).maintenanceRequests.filter((m) => m.businessId === businessId));
+}
+
 export async function getGoals(now: Date = new Date()): Promise<Goal[]> {
   return read(getMockData(now).goals);
 }

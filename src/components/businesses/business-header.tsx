@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { BusinessOverallStatusBadge } from "@/components/domain/business-overall-status-badge";
 import { FollowUpStatus } from "@/components/domain/follow-up-status";
 import { LifecycleStatusBadge } from "@/components/domain/lifecycle-status-badge";
-import { computeDealFollowUp } from "@/lib/data/business-overview";
 import type { BusinessOverview, User } from "@/types";
 
 function HeaderStat({ label, value, extra }: { label: string; value: string; extra?: ReactNode }) {
@@ -24,14 +23,15 @@ function HeaderStat({ label, value, extra }: { label: string; value: string; ext
 export function BusinessHeader({
   overview,
   responsible,
-  today,
 }: {
   overview: BusinessOverview;
   responsible: User | undefined;
-  today: string;
 }) {
-  const { business, primaryContact, openDeal } = overview;
-  const followUp = openDeal ? computeDealFollowUp(openDeal, today) : null;
+  const { business, primaryContact, nextAction } = overview;
+  // "future" é um ranking interno de deriveNextAction, sem cor de urgência
+  // própria — FollowUpStatus já sabe mostrar uma data distante a cinzento
+  // quando recebe urgency: null com daysDelta preenchido.
+  const followUpUrgency = nextAction.urgency === "future" ? null : nextAction.urgency;
 
   return (
     <div className="flex flex-col gap-5 border-b border-border pb-6">
@@ -56,8 +56,12 @@ export function BusinessHeader({
         <HeaderStat label="Responsável" value={responsible?.name ?? "—"} />
         <HeaderStat
           label="Próxima ação"
-          value={openDeal?.nextAction ?? "Sem próxima ação em curso"}
-          extra={followUp && <FollowUpStatus urgency={followUp.urgency} daysDelta={followUp.daysDelta} />}
+          value={nextAction.title}
+          extra={
+            nextAction.source !== "none" && (
+              <FollowUpStatus urgency={followUpUrgency} daysDelta={nextAction.daysDelta} />
+            )
+          }
         />
       </div>
     </div>

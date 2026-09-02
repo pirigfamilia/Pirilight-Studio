@@ -70,4 +70,6 @@ export type {
   BusinessSummary,
   BusinessOverview,
   CommercialDealCard,
+  RankedUrgency,
+  NextAction,
 } from "./views";

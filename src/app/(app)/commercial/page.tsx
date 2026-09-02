@@ -16,7 +16,7 @@ export default async function CommercialPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Comercial"
-        description="Prospects, leads e negócios interessados — com a próxima ação sempre à vista."
+        description="Oportunidades comerciais e os próximos follow-ups."
       />
       <PipelineBoard cards={cards} responsibleById={responsibleById} today={todayIso(now)} />
     </div>

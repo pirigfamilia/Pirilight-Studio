@@ -3,6 +3,7 @@ import type { z } from "zod";
 import type { businessSchema } from "@/lib/validation/business";
 import type { contactSchema } from "@/lib/validation/contact";
 import type { dealSchema } from "@/lib/validation/deal";
+import type { maintenanceRequestSchema } from "@/lib/validation/maintenance-request";
 import type { paymentSchema } from "@/lib/validation/payment";
 import type { piriCardSchema, projectSchema, websiteSchema } from "@/lib/validation/project";
 import type { renewalSchema } from "@/lib/validation/renewal";
@@ -20,6 +21,7 @@ type PiriCard = z.infer<typeof piriCardSchema>;
 type Task = z.infer<typeof taskSchema>;
 type Renewal = z.infer<typeof renewalSchema>;
 type Payment = z.infer<typeof paymentSchema>;
+type MaintenanceRequest = z.infer<typeof maintenanceRequestSchema>;
 
 /**
  * Tipos de **vista** — escritos à mão de propósito.
@@ -137,6 +139,31 @@ export interface BusinessSummary {
 }
 
 /**
+ * Urgência de ranking usada só por `deriveNextAction` — **não** é o `Urgency`
+ * global de `attention-rules.ts`/`getAttentionItems()`, que continua com os
+ * seus 4 valores e a sua janela. Aqui há um quinto valor, `future`, e
+ * `due_soon` fica limitado a 7 dias — para um Deal genuinamente parado
+ * (`stalled`) nunca ficar escondido atrás de uma Task só porque a Task tem
+ * uma data, ainda que a 30 dias.
+ */
+export const RANKED_URGENCIES = ["overdue", "due_today", "due_soon", "stalled", "future"] as const;
+export type RankedUrgency = (typeof RANKED_URGENCIES)[number];
+
+/**
+ * A próxima ação REAL de um negócio — não só `Deal.nextAction`. Junta Tasks e
+ * MaintenanceRequests nossos em aberto com o follow-up do Deal aberto, e
+ * escolhe o mais urgente de todos, sem dar vantagem a nenhum por ser de um
+ * tipo em particular.
+ */
+export interface NextAction {
+  source: "task" | "maintenance" | "deal" | "none";
+  title: string;
+  date: string | null;
+  urgency: RankedUrgency | null;
+  daysDelta: number | null;
+}
+
+/**
  * Tudo o que o Business Detail Hub precisa, junto numa só leitura — como
  * seria um `select` com vários `join`s no Supabase.
  */
@@ -145,15 +172,18 @@ export interface BusinessOverview {
   primaryContact: Contact | null;
   contacts: Contact[];
   deals: Deal[];
-  /** O deal aberto mais relevante — fonte da "próxima ação" no cabeçalho. */
+  /** O deal aberto mais relevante — uma das fontes possíveis de `nextAction`. */
   openDeal: Deal | null;
   projects: ProjectWithDetail[];
   renewals: Renewal[];
   tasks: Task[];
+  maintenanceRequests: MaintenanceRequest[];
   payments: Payment[];
   paymentSummary: PaymentSummary;
   responsibleUserId: string | null;
   overallStatus: BusinessOverallStatus;
+  /** A próxima ação real deste negócio — ver `deriveNextAction`. */
+  nextAction: NextAction;
 }
 
 /** Um Deal com o seu Business já junto, para o board Comercial. */

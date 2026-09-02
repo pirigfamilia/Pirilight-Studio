@@ -6,7 +6,7 @@ export default function GoalsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Goals"
+        title="Objetivos"
         description="Progresso dos objetivos atuais da PiriLight Studio e da PiriCard."
         action={<Badge variant="muted">Em breve</Badge>}
       />

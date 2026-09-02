@@ -8,14 +8,20 @@ import type {
   BusinessSummary,
   CommercialDealCard,
   Deal,
+  LifecycleStatus,
+  MaintenanceRequest,
+  NextAction,
   Project,
   ProjectWithDetail,
+  RankedUrgency,
+  Task,
   Urgency,
 } from "@/types";
 
 import { ATTENTION_WINDOW_DAYS, STALLED_AFTER_DAYS, classifyUrgency } from "./attention-rules";
 import { getBusinesses, getBusinessById, getContactsByBusinessId } from "./businesses";
 import { getDeals, getDealsByBusinessId } from "./deals";
+import { getMaintenanceRequestsByBusinessId } from "./misc";
 import { getPaymentsByBusinessId, getPaymentsByProjectId } from "./payments";
 import {
   getPiriCardByProjectId,
@@ -86,6 +92,172 @@ export function computeDealFollowUp(
   }
 
   return { urgency: null, daysDelta: null };
+}
+
+const NEXT_ACTION_RANK: Record<RankedUrgency, number> = {
+  overdue: 0,
+  due_today: 1,
+  due_soon: 2,
+  stalled: 3,
+  future: 4,
+};
+
+/** `due_soon` fica limitado a esta janela; para além disso é só `future`. */
+const NEXT_ACTION_DUE_SOON_DAYS = 7;
+
+/**
+ * Classificação usada só por `deriveNextAction` — sem corte de janela como
+ * `classifyUrgency`, mas com um quinto valor (`future`) para uma data
+ * distante nunca se confundir com "urgente". Devolve sempre uma
+ * classificação, nunca `null`.
+ */
+function classifyForRanking(
+  dateIso: string,
+  todayIsoDate: string,
+): { urgency: RankedUrgency; daysDelta: number } {
+  const daysDelta = diffCalendarDays(dateIso, todayIsoDate);
+  const urgency: RankedUrgency =
+    daysDelta < 0
+      ? "overdue"
+      : daysDelta === 0
+        ? "due_today"
+        : daysDelta <= NEXT_ACTION_DUE_SOON_DAYS
+          ? "due_soon"
+          : "future";
+  return { urgency, daysDelta };
+}
+
+interface NextActionCandidate {
+  source: NextAction["source"];
+  title: string;
+  date: string | null;
+  urgency: RankedUrgency;
+  daysDelta: number;
+  /** Chave de desempate dentro do mesmo nível de urgência — a mais antiga vence. */
+  sortDate: string;
+}
+
+/**
+ * A próxima ação REAL de um negócio — não só `Deal.nextAction`.
+ *
+ * Junta candidatos de três origens (Tasks nossas abertas, MaintenanceRequests
+ * nossos abertos, o follow-up do Deal aberto) e ordena só pela urgência real:
+ * `overdue` > `due_today` > `due_soon` (≤7 dias) > `stalled` > `future`
+ * (>7 dias). Dentro do mesmo nível, a data mais antiga vence — o que tanto
+ * escolhe "o mais atrasado" em `overdue` como "o mais próximo" em `future` ou
+ * `due_soon`, e "o parado há mais tempo" em `stalled`, com a mesma regra.
+ *
+ * Não reaproveita `computeDealFollowUp` de propósito: aquela função tem corte
+ * de janela (é para o board/tabs, onde uma data distante fica só cinzenta,
+ * sem urgência); aqui uma data distante ainda tem de poder perder para um
+ * Deal `stalled`, o que só a classificação em 5 valores permite.
+ *
+ * Regras já aprovadas, preservadas por construção: um Project
+ * `waiting_on_client` sozinho nunca entra (não há input de Project aqui); uma
+ * Task `waiting_on_client` não é trabalho nosso (excluída); um Deal
+ * `won`/`lost` nunca chega (`openDeal` já vem filtrado); um Business
+ * `inactive` não gera candidato de Deal.
+ */
+export function deriveNextAction(
+  input: {
+    tasks: readonly Task[];
+    maintenanceRequests: readonly MaintenanceRequest[];
+    openDeal: Deal | null;
+    lifecycleStatus: LifecycleStatus;
+  },
+  today: string,
+): NextAction {
+  const candidates: NextActionCandidate[] = [];
+
+  for (const task of input.tasks) {
+    if (task.status === "done" || task.status === "waiting_on_client") continue;
+    if (task.dueDate === null) continue;
+    const { urgency, daysDelta } = classifyForRanking(task.dueDate, today);
+    candidates.push({
+      source: "task",
+      title: task.title,
+      date: task.dueDate,
+      urgency,
+      daysDelta,
+      sortDate: task.dueDate,
+    });
+  }
+
+  for (const request of input.maintenanceRequests) {
+    if (request.status === "done" || request.status === "waiting_on_client") continue;
+
+    if (request.dueDate !== null) {
+      const { urgency, daysDelta } = classifyForRanking(request.dueDate, today);
+      candidates.push({
+        source: "maintenance",
+        title: request.title,
+        date: request.dueDate,
+        urgency,
+        daysDelta,
+        sortDate: request.dueDate,
+      });
+      continue;
+    }
+
+    const daysOpen = -diffCalendarDays(request.requestedAt, today);
+    if (daysOpen >= STALLED_AFTER_DAYS) {
+      candidates.push({
+        source: "maintenance",
+        title: `${request.title} — aberto há ${daysOpen} dias`,
+        date: null,
+        urgency: "stalled",
+        daysDelta: diffCalendarDays(request.requestedAt, today),
+        sortDate: request.requestedAt,
+      });
+    }
+  }
+
+  if (input.openDeal !== null && input.lifecycleStatus !== "inactive") {
+    const deal = input.openDeal;
+
+    if (deal.nextActionDate !== null) {
+      const { urgency, daysDelta } = classifyForRanking(deal.nextActionDate, today);
+      candidates.push({
+        source: "deal",
+        title: deal.nextAction ?? deal.title,
+        date: deal.nextActionDate,
+        urgency,
+        daysDelta,
+        sortDate: deal.nextActionDate,
+      });
+    } else {
+      const daysSinceContact = -diffCalendarDays(deal.lastInteractionDate, today);
+      if (daysSinceContact >= STALLED_AFTER_DAYS) {
+        candidates.push({
+          source: "deal",
+          title: `${deal.title} — sem contacto há ${daysSinceContact} dias`,
+          date: null,
+          urgency: "stalled",
+          daysDelta: diffCalendarDays(deal.lastInteractionDate, today),
+          sortDate: deal.lastInteractionDate,
+        });
+      }
+    }
+  }
+
+  candidates.sort((a, b) => {
+    const byRank = NEXT_ACTION_RANK[a.urgency] - NEXT_ACTION_RANK[b.urgency];
+    if (byRank !== 0) return byRank;
+    return a.sortDate < b.sortDate ? -1 : a.sortDate > b.sortDate ? 1 : 0;
+  });
+
+  const winner = candidates[0];
+  if (winner === undefined) {
+    return { source: "none", title: "Sem ações pendentes", date: null, urgency: null, daysDelta: null };
+  }
+
+  return {
+    source: winner.source,
+    title: winner.title,
+    date: winner.date,
+    urgency: winner.urgency,
+    daysDelta: winner.daysDelta,
+  };
 }
 
 /** O board Comercial: um card por Deal (inclui Ganho/Perdido — é o histórico do funil). */
@@ -173,30 +345,39 @@ export async function getBusinessOverview(
   const business = await getBusinessById(businessId, now);
   if (business === null) return null;
 
-  const [contacts, deals, projects, renewals, tasks, payments] = await Promise.all([
-    getContactsByBusinessId(businessId, now),
-    getDealsByBusinessId(businessId, now),
-    getProjectsByBusinessId(businessId, now),
-    getRenewalsByBusinessId(businessId, now),
-    getTasksByBusinessId(businessId, now),
-    getPaymentsByBusinessId(businessId, now),
-  ]);
+  const [contacts, deals, projects, renewals, tasks, maintenanceRequests, payments] =
+    await Promise.all([
+      getContactsByBusinessId(businessId, now),
+      getDealsByBusinessId(businessId, now),
+      getProjectsByBusinessId(businessId, now),
+      getRenewalsByBusinessId(businessId, now),
+      getTasksByBusinessId(businessId, now),
+      getMaintenanceRequestsByBusinessId(businessId, now),
+      getPaymentsByBusinessId(businessId, now),
+    ]);
 
   const projectsWithDetail = await buildProjectsWithDetail(projects, now);
   const primaryContact = contacts.find((c) => c.id === business.primaryContactId) ?? null;
+  const openDeal = pickOpenDeal(deals);
+  const today = todayIso(now);
 
   return {
     business,
     primaryContact,
     contacts,
     deals,
-    openDeal: pickOpenDeal(deals),
+    openDeal,
     projects: projectsWithDetail,
     renewals,
     tasks,
+    maintenanceRequests,
     payments,
-    paymentSummary: summarizePayments(payments, todayIso(now)),
+    paymentSummary: summarizePayments(payments, today),
     responsibleUserId: deriveResponsibleUserId(deals),
     overallStatus: deriveBusinessOverallStatus(projects),
+    nextAction: deriveNextAction(
+      { tasks, maintenanceRequests, openDeal, lifecycleStatus: business.lifecycleStatus },
+      today,
+    ),
   };
 }

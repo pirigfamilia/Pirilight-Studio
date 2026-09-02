@@ -41,7 +41,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Trabalho",
     items: [
       { label: "Tarefas", href: "/tasks", icon: ListChecks, phase: "1A" },
-      { label: "Goals", href: "/goals", icon: Target, phase: "1B" },
+      { label: "Objetivos", href: "/goals", icon: Target, phase: "1B" },
     ],
   },
   {
@@ -56,19 +56,19 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Websites", href: "/websites", icon: Globe, phase: "1A" },
       { label: "PiriCards", href: "/piricards", icon: CreditCard, phase: "1A" },
-      { label: "Maintenance", href: "/maintenance", icon: Wrench, phase: "1B" },
+      { label: "Manutenção", href: "/maintenance", icon: Wrench, phase: "1B" },
     ],
   },
   {
     label: "Operações",
     items: [
       { label: "Renovações", href: "/renewals", icon: RefreshCw, phase: "1A" },
-      { label: "Finance", href: "/finance", icon: Wallet, phase: "1B" },
+      { label: "Finanças", href: "/finance", icon: Wallet, phase: "1B" },
     ],
   },
   {
     label: "Recursos",
-    items: [{ label: "Materials", href: "/materials", icon: FolderOpen, phase: "1B" }],
+    items: [{ label: "Materiais", href: "/materials", icon: FolderOpen, phase: "1B" }],
   },
 ];
 

@@ -38,7 +38,7 @@ export default async function ClientsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Clientes"
-        description="Os negócios que já compraram um serviço — a mesma fonte de dados do Comercial, só filtrada."
+        description="Clientes, projetos, pagamentos e renovações num só lugar."
       />
       <ClientsBoard rows={rows} />
     </div>
