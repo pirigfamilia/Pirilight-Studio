@@ -248,6 +248,22 @@ describe("groupTasksByUrgency", () => {
     expect(bucketOf(task)).toBe("waitingOnClient");
   });
 
+  it("Round 4.1: Task waiting_on_client + dueDate passada não é overdue, não conta em Atrasadas, e continua em À espera do cliente", () => {
+    const item = {
+      task: makeTask({ status: "waiting_on_client", waitingReason: "photos", dueDate: "2026-01-01" }),
+      businessId: null,
+      businessName: null,
+      projectId: null,
+      projectName: null,
+    };
+
+    const buckets = groupTasksByUrgency([item], TODAY);
+
+    expect(buckets.overdue).toHaveLength(0);
+    expect(buckets.overdue.some((i) => i.task.id === item.task.id)).toBe(false);
+    expect(buckets.waitingOnClient.map((i) => i.task.id)).toEqual([item.task.id]);
+  });
+
   it("done cai sempre em done, mesmo com dueDate vencida", () => {
     expect(bucketOf(makeTask({ status: "done", dueDate: "2026-01-01" }))).toBe("done");
   });

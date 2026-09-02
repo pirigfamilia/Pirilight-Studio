@@ -72,7 +72,7 @@ export function TaskListSection({
     },
     {
       header: "Prazo",
-      cell: (item) => <TaskDueLabel dueDate={item.task.dueDate} today={today} />,
+      cell: (item) => <TaskDueLabel dueDate={item.task.dueDate} today={today} status={item.task.status} />,
     },
     {
       header: "Responsável",
@@ -163,7 +163,7 @@ function TaskCard({
       </div>
 
       <div className="mt-2.5 flex items-center justify-between border-t border-border pt-2.5 text-xs">
-        <TaskDueLabel dueDate={item.task.dueDate} today={today} />
+        <TaskDueLabel dueDate={item.task.dueDate} today={today} status={item.task.status} />
         <AssigneeCell user={userById.get(item.task.assigneeId)} />
       </div>
     </Card>

@@ -53,7 +53,7 @@ export function isBeforeIso(a: string, b: string): boolean {
   return toUtcMillis(a) < toUtcMillis(b);
 }
 
-export type DueDateTone = "overdue" | "today" | "soon" | "future" | "none";
+export type DueDateTone = "overdue" | "today" | "soon" | "future" | "none" | "waiting";
 
 export interface DueDateDescription {
   label: string;
@@ -77,4 +77,16 @@ export function describeDueDate(dueDate: string | null, todayIsoDate: string): D
   if (diff === 1) return { label: "Amanhã", tone: "soon" };
   if (diff <= 7) return { label: `Em ${diff} dias`, tone: "soon" };
   return { label: formatDateDisplay(dueDate), tone: "future" };
+}
+
+/**
+ * Tradução de `dueDate` para uma Task `waiting_on_client` — nunca "Atrasado",
+ * mesmo com a data no passado. "À espera do cliente" não é trabalho nosso
+ * atrasado (regra central, Round 2); esta função existe para não haver
+ * nenhum caminho onde `describeDueDate` (que produz "Atrasado há N dias")
+ * seja chamada para uma Task neste estado.
+ */
+export function describeWaitingDueDate(dueDate: string | null): DueDateDescription {
+  if (dueDate === null) return { label: "Sem data", tone: "none" };
+  return { label: `Prazo original: ${formatDateDisplay(dueDate)}`, tone: "waiting" };
 }

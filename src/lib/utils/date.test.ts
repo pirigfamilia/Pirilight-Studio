@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { describeDueDate } from "./date";
+import { describeDueDate, describeWaitingDueDate } from "./date";
 
 const TODAY = "2026-03-29";
 
@@ -34,5 +34,25 @@ describe("describeDueDate", () => {
 
   it("mais de 7 dias → a data por extenso", () => {
     expect(describeDueDate("2026-04-06", TODAY)).toEqual({ label: "6 de abril", tone: "future" });
+  });
+});
+
+describe("describeWaitingDueDate", () => {
+  it("sem data → 'Sem data'", () => {
+    expect(describeWaitingDueDate(null)).toEqual({ label: "Sem data", tone: "none" });
+  });
+
+  it("com data no passado → 'Prazo original: ...', nunca 'Atrasado'", () => {
+    expect(describeWaitingDueDate("2026-03-01")).toEqual({
+      label: "Prazo original: 1 de março",
+      tone: "waiting",
+    });
+  });
+
+  it("com data no futuro → o mesmo tratamento calmo (nunca urgência)", () => {
+    expect(describeWaitingDueDate("2026-04-06")).toEqual({
+      label: "Prazo original: 6 de abril",
+      tone: "waiting",
+    });
   });
 });
