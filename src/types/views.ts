@@ -1,4 +1,25 @@
+import type { z } from "zod";
+
+import type { businessSchema } from "@/lib/validation/business";
+import type { contactSchema } from "@/lib/validation/contact";
+import type { dealSchema } from "@/lib/validation/deal";
+import type { paymentSchema } from "@/lib/validation/payment";
+import type { piriCardSchema, projectSchema, websiteSchema } from "@/lib/validation/project";
+import type { renewalSchema } from "@/lib/validation/renewal";
+import type { taskSchema } from "@/lib/validation/task";
 import type { WaitingReason, WorkStatus } from "@/lib/validation/work-status";
+
+// Importados diretamente dos schemas (não de "@/types") para não criar um
+// ciclo com o barrel que reexporta este próprio ficheiro.
+type Business = z.infer<typeof businessSchema>;
+type Contact = z.infer<typeof contactSchema>;
+type Deal = z.infer<typeof dealSchema>;
+type Project = z.infer<typeof projectSchema>;
+type Website = z.infer<typeof websiteSchema>;
+type PiriCard = z.infer<typeof piriCardSchema>;
+type Task = z.infer<typeof taskSchema>;
+type Renewal = z.infer<typeof renewalSchema>;
+type Payment = z.infer<typeof paymentSchema>;
 
 /**
  * Tipos de **vista** — escritos à mão de propósito.
@@ -75,4 +96,71 @@ export interface BlockedProjectItem {
   businessId: string;
   businessName: string;
   href: string;
+}
+
+/**
+ * Um projeto com a sua linha de detalhe já junta — é isto que um `join` do
+ * Supabase devolveria de uma vez, em vez de a UI ter de pedir Website ou
+ * PiriCard à parte para cada projeto.
+ */
+export interface ProjectWithDetail {
+  project: Project;
+  website: Website | null;
+  piriCard: PiriCard | null;
+  paymentSummary: PaymentSummary;
+}
+
+/**
+ * Resumo de um negócio para a lista de Clientes — uma linha por Business, com
+ * o suficiente para decidir se vale a pena abrir o detalhe.
+ *
+ * `overallStatus` é derivado dos projetos do negócio (nunca guardado): mostra
+ * a coisa mais importante a saber sobre ele agora, não um enum genérico.
+ */
+export type BusinessOverallStatus =
+  | "blocked"
+  | "waiting_on_client"
+  | "in_progress"
+  | "done"
+  | "none";
+
+export interface BusinessSummary {
+  business: Business;
+  activeProjectsCount: number;
+  hasWebsite: boolean;
+  hasPiriCard: boolean;
+  overallStatus: BusinessOverallStatus;
+  paymentSummary: PaymentSummary;
+  nextRenewal: Renewal | null;
+  openTasksCount: number;
+  responsibleUserId: string | null;
+}
+
+/**
+ * Tudo o que o Business Detail Hub precisa, junto numa só leitura — como
+ * seria um `select` com vários `join`s no Supabase.
+ */
+export interface BusinessOverview {
+  business: Business;
+  primaryContact: Contact | null;
+  contacts: Contact[];
+  deals: Deal[];
+  /** O deal aberto mais relevante — fonte da "próxima ação" no cabeçalho. */
+  openDeal: Deal | null;
+  projects: ProjectWithDetail[];
+  renewals: Renewal[];
+  tasks: Task[];
+  payments: Payment[];
+  paymentSummary: PaymentSummary;
+  responsibleUserId: string | null;
+  overallStatus: BusinessOverallStatus;
+}
+
+/** Um Deal com o seu Business já junto, para o board Comercial. */
+export interface CommercialDealCard {
+  deal: Deal;
+  business: Business;
+  /** `null` quando o deal não tem `nextActionDate` nem está claramente parado. */
+  urgency: Urgency | null;
+  daysDelta: number | null;
 }

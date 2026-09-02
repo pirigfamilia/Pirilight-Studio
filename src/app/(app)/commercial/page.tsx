@@ -1,20 +1,24 @@
-import { Handshake } from "lucide-react";
-
+import { PipelineBoard } from "@/components/commercial/pipeline-board";
 import { PageHeader } from "@/components/layout/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
+import { getCommercialPipeline, getUsers } from "@/lib/data";
+import { todayIso } from "@/lib/utils/date";
 
-export default function CommercialPage() {
+// A urgência dos follow-ups depende do dia de hoje — nunca prerenderizar esta
+// página em build-time, ou "hoje" fica congelado no dia do deploy.
+export const dynamic = "force-dynamic";
+
+export default async function CommercialPage() {
+  const now = new Date();
+  const [cards, users] = await Promise.all([getCommercialPipeline(now), getUsers(now)]);
+  const responsibleById = Object.fromEntries(users.map((user) => [user.id, user]));
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Comercial"
         description="Prospects, leads e negócios interessados — com a próxima ação sempre à vista."
       />
-      <EmptyState
-        icon={Handshake}
-        title="A estrutura está pronta"
-        description="O funil comercial, com follow-ups e próxima ação por negócio, chega no próximo passo do plano."
-      />
+      <PipelineBoard cards={cards} responsibleById={responsibleById} today={todayIso(now)} />
     </div>
   );
 }

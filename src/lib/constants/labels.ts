@@ -1,4 +1,5 @@
 import type {
+  BusinessOverallStatus,
   DealStage,
   LifecycleStatus,
   PaymentStatus,
@@ -84,6 +85,15 @@ export const PRIORITY_LABELS = {
   high: "Alta",
 } satisfies Record<Priority, string>;
 
+/** `BusinessOverallStatus` reaproveita o vocabulário do WorkStatus + "none". */
+export const BUSINESS_OVERALL_STATUS_LABELS = {
+  blocked: WORK_STATUS_LABELS.blocked,
+  waiting_on_client: WORK_STATUS_LABELS.waiting_on_client,
+  in_progress: WORK_STATUS_LABELS.in_progress,
+  done: WORK_STATUS_LABELS.done,
+  none: "Sem projetos",
+} satisfies Record<BusinessOverallStatus, string>;
+
 export const URGENCY_LABELS = {
   overdue: "Atrasado",
   due_today: "Hoje",
@@ -113,4 +123,8 @@ export function renewalTypeLabel(type: RenewalType): string {
 
 export function urgencyLabel(urgency: Urgency): string {
   return URGENCY_LABELS[urgency];
+}
+
+export function businessOverallStatusLabel(status: BusinessOverallStatus): string {
+  return BUSINESS_OVERALL_STATUS_LABELS[status];
 }
