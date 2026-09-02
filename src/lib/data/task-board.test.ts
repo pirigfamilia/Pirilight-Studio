@@ -14,6 +14,8 @@ import {
   getTasksBoard,
   groupTasksByUrgency,
   resolveTaskContext,
+  taskBelongsToBusiness,
+  type BusinessTaskScope,
 } from "./task-board";
 
 const TODAY = "2026-03-29";
@@ -192,6 +194,67 @@ describe("resolveTaskContext", () => {
       projectId: null,
       projectName: null,
     });
+  });
+});
+
+describe("taskBelongsToBusiness (Round 5.1 — substitui taskIds congelados)", () => {
+  const scope: BusinessTaskScope = {
+    businessId: "biz-1",
+    projectIds: ["proj-1", "proj-2"],
+    dealIds: ["deal-1"],
+    maintenanceRequestIds: ["mnt-1"],
+  };
+
+  it("uma Task ligada diretamente ao Business pertence — mesmo criada 'depois' de qualquer snapshot", () => {
+    // O ponto central da correção: esta função nunca olha para uma lista de
+    // taskIds pré-calculada — resolve estruturalmente, por isso uma Task
+    // completamente nova, nunca vista antes, ainda assim resolve corretamente.
+    const newTask = makeTask({
+      id: "task-recem-criada",
+      relatedEntityType: "business",
+      relatedEntityId: "biz-1",
+    });
+    expect(taskBelongsToBusiness(newTask, scope)).toBe(true);
+  });
+
+  it("uma Task ligada a um Project do Business pertence", () => {
+    const newTask = makeTask({ relatedEntityType: "project", relatedEntityId: "proj-2" });
+    expect(taskBelongsToBusiness(newTask, scope)).toBe(true);
+  });
+
+  it("uma Task ligada a um Deal do Business pertence", () => {
+    const task = makeTask({ relatedEntityType: "deal", relatedEntityId: "deal-1" });
+    expect(taskBelongsToBusiness(task, scope)).toBe(true);
+  });
+
+  it("uma Task ligada a um MaintenanceRequest do Business pertence", () => {
+    const task = makeTask({ relatedEntityType: "maintenance_request", relatedEntityId: "mnt-1" });
+    expect(taskBelongsToBusiness(task, scope)).toBe(true);
+  });
+
+  it("uma Task de outro Business (Project/Deal/Business que não está no scope) nunca conta", () => {
+    expect(
+      taskBelongsToBusiness(makeTask({ relatedEntityType: "business", relatedEntityId: "biz-outro" }), scope),
+    ).toBe(false);
+    expect(
+      taskBelongsToBusiness(makeTask({ relatedEntityType: "project", relatedEntityId: "proj-outro" }), scope),
+    ).toBe(false);
+    expect(
+      taskBelongsToBusiness(makeTask({ relatedEntityType: "deal", relatedEntityId: "deal-outro" }), scope),
+    ).toBe(false);
+    expect(
+      taskBelongsToBusiness(
+        makeTask({ relatedEntityType: "maintenance_request", relatedEntityId: "mnt-outro" }),
+        scope,
+      ),
+    ).toBe(false);
+  });
+
+  it("uma Task sem relação (ou 'goal') nunca conta", () => {
+    expect(taskBelongsToBusiness(makeTask(), scope)).toBe(false);
+    expect(
+      taskBelongsToBusiness(makeTask({ relatedEntityType: "goal", relatedEntityId: "goal-1" }), scope),
+    ).toBe(false);
   });
 });
 

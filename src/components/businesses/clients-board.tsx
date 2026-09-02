@@ -12,6 +12,7 @@ import {
   type ClientListRow,
 } from "@/components/businesses/client-list-row";
 import { LiveOverallStatusBadge } from "@/components/businesses/live-overall-status-badge";
+import { useLiveBusinessCounts } from "@/components/businesses/use-live-business-scope";
 import { EntityListTable } from "@/components/domain/entity-list-table";
 import { PaymentProgress } from "@/components/domain/payment-progress";
 import { Button } from "@/components/ui/button";
@@ -114,8 +115,9 @@ export function ClientsBoard({ rows, initialProjects, initialTasks }: ClientsBoa
             header: "Estado",
             cell: (row) => (
               <LiveOverallStatusBadge
+                businessId={row.businessId}
                 projectIds={row.projectIds}
-                taskIds={row.taskIds}
+                dealIds={row.dealIds}
                 maintenanceRequests={row.maintenanceRequests}
                 initialProjects={initialProjects}
                 initialTasks={initialTasks}
@@ -125,15 +127,7 @@ export function ClientsBoard({ rows, initialProjects, initialTasks }: ClientsBoa
           {
             header: "Projetos",
             cell: (row) => (
-              <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                <span className={cn("flex items-center gap-1", row.summary.hasWebsite && "text-info")}>
-                  <Globe className="h-3.5 w-3.5" />
-                </span>
-                <span className={cn("flex items-center gap-1", row.summary.hasPiriCard && "text-info")}>
-                  <CreditCard className="h-3.5 w-3.5" />
-                </span>
-                <span>{row.summary.activeProjectsCount} ativos</span>
-              </div>
+              <ActiveProjectsCell row={row} initialProjects={initialProjects} initialTasks={initialTasks} />
             ),
           },
           {
@@ -155,7 +149,9 @@ export function ClientsBoard({ rows, initialProjects, initialTasks }: ClientsBoa
           },
           {
             header: "Tarefas",
-            cell: (row) => <span className="text-muted-foreground">{row.summary.openTasksCount}</span>,
+            cell: (row) => (
+              <OpenTasksCell row={row} initialProjects={initialProjects} initialTasks={initialTasks} />
+            ),
           },
           {
             header: "Responsável",
@@ -167,4 +163,51 @@ export function ClientsBoard({ rows, initialProjects, initialTasks }: ClientsBoa
       />
     </div>
   );
+}
+
+interface LiveCellProps {
+  row: ClientListRow;
+  initialProjects: Project[];
+  initialTasks: Task[];
+}
+
+/**
+ * "Projetos" — `hasWebsite`/`hasPiriCard` continuam estáticos (não são
+ * editáveis nesta fase); só a contagem de ativos é ao vivo (Round 5.1).
+ */
+function ActiveProjectsCell({ row, initialProjects, initialTasks }: LiveCellProps) {
+  const { activeProjectsCount } = useLiveBusinessCounts({
+    businessId: row.businessId,
+    projectIds: row.projectIds,
+    dealIds: row.dealIds,
+    maintenanceRequestIds: row.maintenanceRequests.map((m) => m.id),
+    initialProjects,
+    initialTasks,
+  });
+
+  return (
+    <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
+      <span className={cn("flex items-center gap-1", row.summary.hasWebsite && "text-info")}>
+        <Globe className="h-3.5 w-3.5" />
+      </span>
+      <span className={cn("flex items-center gap-1", row.summary.hasPiriCard && "text-info")}>
+        <CreditCard className="h-3.5 w-3.5" />
+      </span>
+      <span>{activeProjectsCount} ativos</span>
+    </div>
+  );
+}
+
+/** "Tarefas" — contagem ao vivo (Round 5.1), já não presa ao summary do servidor. */
+function OpenTasksCell({ row, initialProjects, initialTasks }: LiveCellProps) {
+  const { openTasksCount } = useLiveBusinessCounts({
+    businessId: row.businessId,
+    projectIds: row.projectIds,
+    dealIds: row.dealIds,
+    maintenanceRequestIds: row.maintenanceRequests.map((m) => m.id),
+    initialProjects,
+    initialTasks,
+  });
+
+  return <span className="text-muted-foreground">{openTasksCount}</span>;
 }

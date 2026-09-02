@@ -82,12 +82,19 @@ export interface WaitingOnClientItem {
   businessName: string;
 }
 
-/** Resumo financeiro agregado, usado pelo futuro `PaymentProgress`. */
+/**
+ * Resumo financeiro agregado, usado pelo `PaymentProgress`.
+ *
+ * `hasPayments` (Round 5.1) distingue "não existe nenhum Payment" de "existe
+ * um Payment real com `totalValue: 0`" — o schema permite o segundo caso, e
+ * `totalValue === 0` sozinho não chegava para os separar.
+ */
 export interface PaymentSummary {
   totalValue: number;
   amountReceived: number;
   remainingValue: number;
   hasOverdue: boolean;
+  hasPayments: boolean;
 }
 
 /** Projeto bloqueado internamente — é nosso para desbloquear. */

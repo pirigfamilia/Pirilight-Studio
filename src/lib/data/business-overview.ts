@@ -66,6 +66,26 @@ export function deriveBusinessOverallStatus(input: {
   return "done";
 }
 
+/**
+ * Quantos Projects deste negócio ainda não estão concluídos. Extraída como
+ * função pura (Round 5.1) para nunca haver duas versões desta regra: usada
+ * tanto pelo `getBusinessSummary` (servidor) como pela contagem ao vivo de
+ * Clientes (`useLiveBusinessScope`, cliente) sobre o estado atual da
+ * `useProjectStore`.
+ */
+export function countActiveProjects(projects: readonly Project[]): number {
+  return projects.filter((p) => p.status !== "done").length;
+}
+
+/**
+ * Quantas Tasks deste negócio ainda são trabalho nosso em aberto (nem
+ * concluídas, nem à espera do cliente). Mesma razão de existir que
+ * `countActiveProjects` — reaproveitada no servidor e ao vivo no cliente.
+ */
+export function countOpenTasks(tasks: readonly Task[]): number {
+  return tasks.filter((t) => t.status !== "done" && t.status !== "waiting_on_client").length;
+}
+
 /** O responsável mais recente: quem tratou por último de alguma oportunidade deste negócio. */
 export function deriveResponsibleUserId(deals: readonly Deal[]): string | null {
   if (deals.length === 0) return null;
@@ -338,14 +358,13 @@ export async function getBusinessSummary(
 
   return {
     business,
-    activeProjectsCount: projects.filter((p) => p.status !== "done").length,
+    activeProjectsCount: countActiveProjects(projects),
     hasWebsite: projects.some((p) => p.type === "website"),
     hasPiriCard: projects.some((p) => p.type === "piricard"),
     overallStatus: deriveBusinessOverallStatus({ projects, tasks, maintenanceRequests }),
     paymentSummary: summarizePayments(payments, todayIso(now)),
     nextRenewal: pendingRenewals[0] ?? null,
-    openTasksCount: tasks.filter((t) => t.status !== "done" && t.status !== "waiting_on_client")
-      .length,
+    openTasksCount: countOpenTasks(tasks),
     responsibleUserId: deriveResponsibleUserId(deals),
   };
 }

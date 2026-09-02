@@ -11,13 +11,16 @@ export interface ClientListRow {
   hasPendingPayment: boolean;
   hasUpcomingRenewal: boolean;
   /**
-   * D7 (Round 5) — pré-resolvidos no servidor via `getProjectsByBusinessId`/
-   * `getTasksByBusinessId` (que já sabe resolver os 5 tipos de relação
-   * polimórfica). O cliente só filtra `useProjectStore`/`useTaskStore` por
-   * estes ids — nunca leva Business/Project/Deal globais para `ClientsBoard`.
+   * D7 (Round 5) + Round 5.1 — ids **estruturais** do negócio (nunca mudam
+   * depois de criados: um Project/Deal não muda de Business), por isso são
+   * seguros para pré-calcular uma única vez no servidor. Substituem a lista
+   * de `taskIds` do Round 5, que "congelava" no momento do carregamento da
+   * página e nunca via uma Task criada depois — `LiveOverallStatusBadge`
+   * resolve agora contra estes ids, ao vivo, sobre a `useTaskStore` atual.
    */
+  businessId: string;
   projectIds: string[];
-  taskIds: string[];
+  dealIds: string[];
   /** Já scoped a este negócio — nunca mutado nesta fase. */
   maintenanceRequests: MaintenanceRequest[];
 }

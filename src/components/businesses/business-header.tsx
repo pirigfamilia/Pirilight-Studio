@@ -37,7 +37,7 @@ export function BusinessHeader({
 }) {
   const { business, primaryContact } = overview;
   const projectIds = overview.projects.map((item) => item.project.id);
-  const taskIds = overview.tasks.map((task) => task.id);
+  const dealIds = overview.deals.map((deal) => deal.id);
 
   return (
     <div className="flex flex-col gap-5 border-b border-border pb-6">
@@ -52,8 +52,9 @@ export function BusinessHeader({
           </p>
         </div>
         <LiveOverallStatusBadge
+          businessId={business.id}
           projectIds={projectIds}
-          taskIds={taskIds}
+          dealIds={dealIds}
           maintenanceRequests={overview.maintenanceRequests}
           initialProjects={allProjects}
           initialTasks={allTasks}

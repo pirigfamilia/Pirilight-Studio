@@ -3,6 +3,7 @@ import { CreditCard, Globe } from "lucide-react";
 
 import type { ClientListRow } from "@/components/businesses/client-list-row";
 import { LiveOverallStatusBadge } from "@/components/businesses/live-overall-status-badge";
+import { useLiveBusinessCounts } from "@/components/businesses/use-live-business-scope";
 import { PaymentProgress } from "@/components/domain/payment-progress";
 import { Card } from "@/components/ui/card";
 import { formatDateDisplay } from "@/lib/utils/format";
@@ -12,7 +13,7 @@ import type { Project, Task } from "@/types";
 
 interface BusinessCardProps {
   row: ClientListRow;
-  /** Snapshots globais do servidor — repassados ao `LiveOverallStatusBadge` (D7). */
+  /** Snapshots globais do servidor — repassados ao `LiveOverallStatusBadge`/`useLiveBusinessCounts` (D7). */
   initialProjects: Project[];
   initialTasks: Task[];
 }
@@ -21,6 +22,15 @@ interface BusinessCardProps {
 export function BusinessCard({ row, initialProjects, initialTasks }: BusinessCardProps) {
   const { summary, responsibleName } = row;
   const { business, nextRenewal } = summary;
+
+  const { activeProjectsCount, openTasksCount } = useLiveBusinessCounts({
+    businessId: row.businessId,
+    projectIds: row.projectIds,
+    dealIds: row.dealIds,
+    maintenanceRequestIds: row.maintenanceRequests.map((m) => m.id),
+    initialProjects,
+    initialTasks,
+  });
 
   return (
     <Card className="p-4">
@@ -33,8 +43,9 @@ export function BusinessCard({ row, initialProjects, initialTasks }: BusinessCar
             <p className="truncate text-xs text-muted-foreground">{business.industry}</p>
           </div>
           <LiveOverallStatusBadge
+            businessId={row.businessId}
             projectIds={row.projectIds}
-            taskIds={row.taskIds}
+            dealIds={row.dealIds}
             maintenanceRequests={row.maintenanceRequests}
             initialProjects={initialProjects}
             initialTasks={initialTasks}
@@ -50,8 +61,8 @@ export function BusinessCard({ row, initialProjects, initialTasks }: BusinessCar
           <CreditCard className="h-3.5 w-3.5" /> {summary.hasPiriCard ? "PiriCard" : "—"}
         </span>
         <span>
-          {summary.activeProjectsCount} projeto{summary.activeProjectsCount === 1 ? "" : "s"} ativo
-          {summary.activeProjectsCount === 1 ? "" : "s"}
+          {activeProjectsCount} projeto{activeProjectsCount === 1 ? "" : "s"} ativo
+          {activeProjectsCount === 1 ? "" : "s"}
         </span>
       </div>
 
@@ -66,7 +77,7 @@ export function BusinessCard({ row, initialProjects, initialTasks }: BusinessCar
             : "Sem renovações agendadas"}
         </span>
         <span>
-          {summary.openTasksCount} tarefa{summary.openTasksCount === 1 ? "" : "s"}
+          {openTasksCount} tarefa{openTasksCount === 1 ? "" : "s"}
         </span>
       </div>
 

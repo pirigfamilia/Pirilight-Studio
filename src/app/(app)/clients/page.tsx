@@ -5,11 +5,11 @@ import {
   RENEWALS_PANEL_WINDOW_DAYS,
   getBusinessSummaries,
   getClientBusinesses,
+  getDealsByBusinessId,
   getMaintenanceRequestsByBusinessId,
   getProjects,
   getProjectsByBusinessId,
   getTasks,
-  getTasksByBusinessId,
   getUsers,
 } from "@/lib/data";
 import { diffCalendarDays, todayIso } from "@/lib/utils/date";
@@ -32,9 +32,9 @@ export default async function ClientsPage() {
 
   const rows: ClientListRow[] = await Promise.all(
     summaries.map(async (summary) => {
-      const [projects, tasks, maintenanceRequests] = await Promise.all([
+      const [projects, deals, maintenanceRequests] = await Promise.all([
         getProjectsByBusinessId(summary.business.id, now),
-        getTasksByBusinessId(summary.business.id, now),
+        getDealsByBusinessId(summary.business.id, now),
         getMaintenanceRequestsByBusinessId(summary.business.id, now),
       ]);
 
@@ -47,8 +47,9 @@ export default async function ClientsPage() {
         hasUpcomingRenewal:
           summary.nextRenewal !== null &&
           diffCalendarDays(summary.nextRenewal.dueDate, today) <= RENEWALS_PANEL_WINDOW_DAYS,
+        businessId: summary.business.id,
         projectIds: projects.map((p) => p.id),
-        taskIds: tasks.map((t) => t.id),
+        dealIds: deals.map((d) => d.id),
         maintenanceRequests,
       };
     }),

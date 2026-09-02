@@ -116,6 +116,49 @@ export function buildTasksWithDetail(
   return tasks.map((task) => ({ task, ...resolveWithIndexes(task, idx) }));
 }
 
+/**
+ * Os ids **estruturais** de um negócio — os que nunca mudam depois de criados
+ * (um Project/Deal/MaintenanceRequest não muda de Business). Ao contrário de
+ * uma lista de `taskIds` (que "congela" no momento em que é calculada e nunca
+ * vê uma Task criada depois), estes ids continuam corretos para sempre, por
+ * isso são seguros para pré-calcular no servidor uma única vez.
+ */
+export interface BusinessTaskScope {
+  businessId: string;
+  projectIds: readonly string[];
+  dealIds: readonly string[];
+  maintenanceRequestIds: readonly string[];
+}
+
+/**
+ * Testa se uma Task pertence a um negócio, resolvendo o par polimórfico
+ * (`relatedEntityType`/`relatedEntityId`) contra os ids estruturais desse
+ * negócio — sem precisar de saber, de antemão, que Tasks existem.
+ *
+ * É esta indireção que permite às vistas reativas (`LiveOverallStatusBadge`,
+ * `useLiveBusinessScope`) filtrar a `useTaskStore` **ao vivo**: uma Task
+ * criada depois do carregamento da página passa exatamente pela mesma
+ * verificação e entra corretamente, sem depender de uma lista de ids
+ * calculada no passado.
+ */
+export function taskBelongsToBusiness(task: Task, scope: BusinessTaskScope): boolean {
+  if (task.relatedEntityId === null) return false;
+
+  switch (task.relatedEntityType) {
+    case "business":
+      return task.relatedEntityId === scope.businessId;
+    case "project":
+      return scope.projectIds.includes(task.relatedEntityId);
+    case "deal":
+      return scope.dealIds.includes(task.relatedEntityId);
+    case "maintenance_request":
+      return scope.maintenanceRequestIds.includes(task.relatedEntityId);
+    // "goal": nenhum negócio resolvível nesta fase — mesma regra de resolveWithIndexes.
+    default:
+      return false;
+  }
+}
+
 /** Tudo o que `/tasks` precisa, numa só leitura composta. */
 export async function getTasksBoard(now: Date = new Date()): Promise<TaskWithDetail[]> {
   const [tasks, businesses, projects, deals, maintenanceRequests] = await Promise.all([

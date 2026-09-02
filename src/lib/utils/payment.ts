@@ -44,5 +44,34 @@ export function summarizePayments(payments: readonly Payment[], todayIso: string
     amountReceived,
     remainingValue: roundEuros(totalValue - amountReceived),
     hasOverdue: payments.some((p) => derivePaymentStatus(p, todayIso) === "overdue"),
+    // Round 5.1: nunca inferido de totalValue === 0 — um Payment real pode
+    // legitimamente ter um total de 0€, e isso não é o mesmo que não existir.
+    hasPayments: payments.length > 0,
   };
+}
+
+/**
+ * O que `PaymentProgress` precisa de saber para decidir o que mostrar — sem
+ * usar `totalValue === 0` como sinónimo de "sem pagamentos" (Round 5.1).
+ * Extraída como função pura para ser testável sem montar o componente (este
+ * projeto não tem testes de componentes — só de lógica pura).
+ */
+export interface PaymentProgressView {
+  hasPayments: boolean;
+  /** Sempre entre 0 e 100; 100 quando `totalValue === 0` (nada em falta, nada a dividir). */
+  percent: number;
+  isPaid: boolean;
+}
+
+export function derivePaymentProgressView(summary: PaymentSummary): PaymentProgressView {
+  if (!summary.hasPayments) {
+    return { hasPayments: false, percent: 0, isPaid: false };
+  }
+
+  const percent =
+    summary.totalValue === 0
+      ? 100
+      : Math.max(0, Math.min(100, Math.round((summary.amountReceived / summary.totalValue) * 100)));
+
+  return { hasPayments: true, percent, isPaid: summary.remainingValue <= 0 };
 }

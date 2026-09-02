@@ -8,6 +8,8 @@ import type { Deal, MaintenanceRequest, Project, Task } from "@/types";
 
 import {
   computeDealFollowUp,
+  countActiveProjects,
+  countOpenTasks,
   deriveBusinessOverallStatus,
   deriveNextAction,
   deriveResponsibleUserId,
@@ -253,6 +255,41 @@ describe("deriveNextAction", () => {
     // é literalmente a Task "Insistir pelas fotografias", ligada ao projeto
     // waiting_on_client — não o projeto em si.
     expect(overview?.tasks.some((t) => t.id === TASK_IDS.boiNaBrasaChasePhotos)).toBe(true);
+  });
+});
+
+describe("countActiveProjects / countOpenTasks (Round 5.1 — reaproveitadas ao vivo em Clientes)", () => {
+  it("countActiveProjects reage a uma mudança de estado de in_progress para done", () => {
+    const projects = [makeProject({ status: "in_progress" })];
+    expect(countActiveProjects(projects)).toBe(1);
+
+    const afterUpdate = [{ ...projects[0]!, status: "done" as const }];
+    expect(countActiveProjects(afterUpdate)).toBe(0);
+  });
+
+  it("countOpenTasks reage a uma Task passar de todo para done", () => {
+    const tasks = [makeTask({ status: "todo" })];
+    expect(countOpenTasks(tasks)).toBe(1);
+
+    const afterUpdate = [{ ...tasks[0]!, status: "done" as const }];
+    expect(countOpenTasks(afterUpdate)).toBe(0);
+  });
+
+  it("countOpenTasks reage à criação de uma Task nova (sem depender de nenhum snapshot anterior)", () => {
+    const before = [makeTask({ id: "t1", status: "todo" })];
+    expect(countOpenTasks(before)).toBe(1);
+
+    const afterCreate = [...before, makeTask({ id: "t2-nova", status: "todo" })];
+    expect(countOpenTasks(afterCreate)).toBe(2);
+  });
+
+  it("countOpenTasks exclui waiting_on_client tal como done", () => {
+    const tasks = [
+      makeTask({ id: "t1", status: "waiting_on_client", waitingReason: "content" }),
+      makeTask({ id: "t2", status: "done" }),
+      makeTask({ id: "t3", status: "in_progress" }),
+    ];
+    expect(countOpenTasks(tasks)).toBe(1);
   });
 });
 

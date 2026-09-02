@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Payment } from "@/types";
 
-import { derivePaymentStatus, getRemainingValue, summarizePayments } from "./payment";
+import { derivePaymentProgressView, derivePaymentStatus, getRemainingValue, summarizePayments } from "./payment";
 
 const TODAY = "2026-03-29";
 
@@ -81,6 +81,7 @@ describe("summarizePayments", () => {
       amountReceived: 800,
       remainingValue: 200,
       hasOverdue: true,
+      hasPayments: true,
     });
   });
 
@@ -90,6 +91,51 @@ describe("summarizePayments", () => {
       amountReceived: 0,
       remainingValue: 0,
       hasOverdue: false,
+      hasPayments: false,
     });
+  });
+
+  it("Round 5.1: distingue 'sem nenhum Payment' de 'um Payment real com total 0€'", () => {
+    const noPayments = summarizePayments([], TODAY);
+    const zeroValuePayment = summarizePayments(
+      [makePayment({ totalValue: 0, amountReceived: 0, paymentStatus: "paid" })],
+      TODAY,
+    );
+
+    expect(noPayments.hasPayments).toBe(false);
+    expect(zeroValuePayment.hasPayments).toBe(true);
+    // As duas têm totalValue === 0 — é precisamente o caso que totalValue
+    // sozinho não conseguia distinguir.
+    expect(noPayments.totalValue).toBe(0);
+    expect(zeroValuePayment.totalValue).toBe(0);
+  });
+});
+
+describe("derivePaymentProgressView (Round 5.1 — já não usa totalValue === 0 para inferir ausência de Payment)", () => {
+  it("sem nenhum Payment: hasPayments false, sem percent/isPaid relevantes", () => {
+    const view = derivePaymentProgressView(summarizePayments([], TODAY));
+    expect(view.hasPayments).toBe(false);
+  });
+
+  it("um Payment real com total 0€ é tratado como pago, não como ausente", () => {
+    const summary = summarizePayments(
+      [makePayment({ totalValue: 0, amountReceived: 0, paymentStatus: "paid" })],
+      TODAY,
+    );
+    const view = derivePaymentProgressView(summary);
+
+    expect(view.hasPayments).toBe(true);
+    expect(view.isPaid).toBe(true);
+    expect(view.percent).toBe(100);
+    expect(Number.isNaN(view.percent)).toBe(false);
+  });
+
+  it("um Payment parcial normal continua a calcular a percentagem certa", () => {
+    const summary = summarizePayments([makePayment({ totalValue: 400, amountReceived: 100 })], TODAY);
+    const view = derivePaymentProgressView(summary);
+
+    expect(view.hasPayments).toBe(true);
+    expect(view.isPaid).toBe(false);
+    expect(view.percent).toBe(25);
   });
 });
