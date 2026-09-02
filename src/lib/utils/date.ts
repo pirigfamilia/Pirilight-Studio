@@ -14,6 +14,8 @@
  * que converte um instante no dia de calendário como o Sny e o Bino o veem.
  */
 
+import { formatDateDisplay } from "./format";
+
 /** Fuso do negócio. É aqui — e só aqui — que "hoje" é decidido. */
 export const BUSINESS_TIME_ZONE = "Europe/Lisbon";
 
@@ -49,4 +51,30 @@ export function isoDateToTimestamp(isoDate: string): string {
 /** `true` se `a` for anterior a `b` (dias de calendário). */
 export function isBeforeIso(a: string, b: string): boolean {
   return toUtcMillis(a) < toUtcMillis(b);
+}
+
+export type DueDateTone = "overdue" | "today" | "soon" | "future" | "none";
+
+export interface DueDateDescription {
+  label: string;
+  tone: DueDateTone;
+}
+
+/**
+ * Tradução de uma `dueDate` para linguagem natural — o único sítio onde isto
+ * acontece (Tarefas, Round 4). Sem data → "Sem data"; passado → "Atrasado há
+ * N dias"; hoje → "Hoje"; amanhã → "Amanhã" (caso especial, gramaticalmente
+ * diferente de "Em 1 dias"); até 7 dias → "Em N dias"; mais além → a data por
+ * extenso (ex.: "15 de setembro"), porque a essa distância o número de dias
+ * já não é o mais útil de ler.
+ */
+export function describeDueDate(dueDate: string | null, todayIsoDate: string): DueDateDescription {
+  if (dueDate === null) return { label: "Sem data", tone: "none" };
+
+  const diff = diffCalendarDays(dueDate, todayIsoDate);
+  if (diff < 0) return { label: `Atrasado há ${-diff} dias`, tone: "overdue" };
+  if (diff === 0) return { label: "Hoje", tone: "today" };
+  if (diff === 1) return { label: "Amanhã", tone: "soon" };
+  if (diff <= 7) return { label: `Em ${diff} dias`, tone: "soon" };
+  return { label: formatDateDisplay(dueDate), tone: "future" };
 }

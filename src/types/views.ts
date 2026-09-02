@@ -194,3 +194,18 @@ export interface CommercialDealCard {
   urgency: Urgency | null;
   daysDelta: number | null;
 }
+
+/**
+ * Uma Task com o Business/Project a que pertence já resolvidos (o par
+ * polimórfico `relatedEntityType`/`relatedEntityId` percorrido até ao fim) —
+ * usada em `/tasks` e na tab Tarefas do Business Detail. `null` em ambos
+ * quando a Task não está ligada a nada, ou está ligada a uma entidade que
+ * ainda não resolve num negócio conhecido (`goal`, nesta fase).
+ */
+export interface TaskWithDetail {
+  task: Task;
+  businessId: string | null;
+  businessName: string | null;
+  projectId: string | null;
+  projectName: string | null;
+}

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
+import { NextActionStat } from "@/components/businesses/next-action-stat";
 import { BusinessOverallStatusBadge } from "@/components/domain/business-overall-status-badge";
-import { FollowUpStatus } from "@/components/domain/follow-up-status";
 import { LifecycleStatusBadge } from "@/components/domain/lifecycle-status-badge";
-import type { BusinessOverview, User } from "@/types";
+import type { BusinessOverview, Task, User } from "@/types";
 
 function HeaderStat({ label, value, extra }: { label: string; value: string; extra?: ReactNode }) {
   return (
@@ -23,15 +23,16 @@ function HeaderStat({ label, value, extra }: { label: string; value: string; ext
 export function BusinessHeader({
   overview,
   responsible,
+  allTasks,
+  today,
 }: {
   overview: BusinessOverview;
   responsible: User | undefined;
+  /** Snapshot global do servidor — só para semear a `useTaskStore`, ver `NextActionStat`. */
+  allTasks: Task[];
+  today: string;
 }) {
-  const { business, primaryContact, nextAction } = overview;
-  // "future" é um ranking interno de deriveNextAction, sem cor de urgência
-  // própria — FollowUpStatus já sabe mostrar uma data distante a cinzento
-  // quando recebe urgency: null com daysDelta preenchido.
-  const followUpUrgency = nextAction.urgency === "future" ? null : nextAction.urgency;
+  const { business, primaryContact } = overview;
 
   return (
     <div className="flex flex-col gap-5 border-b border-border pb-6">
@@ -54,14 +55,15 @@ export function BusinessHeader({
           value={primaryContact ? `${primaryContact.name} · ${primaryContact.role}` : "—"}
         />
         <HeaderStat label="Responsável" value={responsible?.name ?? "—"} />
-        <HeaderStat
-          label="Próxima ação"
-          value={nextAction.title}
-          extra={
-            nextAction.source !== "none" && (
-              <FollowUpStatus urgency={followUpUrgency} daysDelta={nextAction.daysDelta} />
-            )
-          }
+        <NextActionStat
+          business={business}
+          projects={overview.projects.map((item) => item.project)}
+          deals={overview.deals}
+          maintenanceRequests={overview.maintenanceRequests}
+          openDeal={overview.openDeal}
+          lifecycleStatus={business.lifecycleStatus}
+          initialTasks={allTasks}
+          today={today}
         />
       </div>
     </div>

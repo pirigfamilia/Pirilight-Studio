@@ -135,3 +135,7 @@ export function urgencyLabel(urgency: Urgency): string {
 export function businessOverallStatusLabel(status: BusinessOverallStatus): string {
   return BUSINESS_OVERALL_STATUS_LABELS[status];
 }
+
+export function priorityLabel(priority: Priority): string {
+  return PRIORITY_LABELS[priority];
+}

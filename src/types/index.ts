@@ -72,4 +72,5 @@ export type {
   CommercialDealCard,
   RankedUrgency,
   NextAction,
+  TaskWithDetail,
 } from "./views";

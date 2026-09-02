@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { BusinessDetailTabDef } from "@/components/businesses/business-detail-tabs";
 import { BusinessDetailTabs } from "@/components/businesses/business-detail-tabs";
 import { BusinessHeader } from "@/components/businesses/business-header";
+import { BusinessTasksTab } from "@/components/businesses/business-tasks-tab";
 import { DealHistoryRow } from "@/components/businesses/deal-history-row";
 import { ProjectSummaryCard } from "@/components/businesses/project-summary-card";
 import { FollowUpStatus } from "@/components/domain/follow-up-status";
@@ -17,6 +18,7 @@ import {
   RENEWALS_PANEL_WINDOW_DAYS,
   classifyUrgency,
   getBusinessOverview,
+  getTasks,
   getUsers,
 } from "@/lib/data";
 import { derivePaymentStatus } from "@/lib/utils/payment";
@@ -46,10 +48,11 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   const overview = await getBusinessOverview(businessId, now);
   if (overview === null) notFound();
 
-  const users = await getUsers(now);
+  const [users, allTasks] = await Promise.all([getUsers(now), getTasks(now)]);
   const userById = new Map(users.map((user) => [user.id, user]));
   const today = todayIso(now);
   const responsible = overview.responsibleUserId ? userById.get(overview.responsibleUserId) : undefined;
+  const projects = overview.projects.map((item) => item.project);
 
   const tabs: BusinessDetailTabDef[] = [
     { value: "overview", label: "Visão geral", content: <OverviewTab overview={overview} today={today} /> },
@@ -64,7 +67,18 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
     {
       value: "tasks",
       label: "Tarefas",
-      content: <TasksTab overview={overview} userById={userById} />,
+      content: (
+        <BusinessTasksTab
+          business={overview.business}
+          projects={projects}
+          deals={overview.deals}
+          maintenanceRequests={overview.maintenanceRequests}
+          users={users}
+          userById={userById}
+          initialTasks={allTasks}
+          today={today}
+        />
+      ),
     },
     { value: "payments", label: "Pagamentos", content: <PaymentsTab overview={overview} today={today} /> },
   ];
@@ -73,7 +87,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
 
   return (
     <div className="flex flex-col gap-6">
-      <BusinessHeader overview={overview} responsible={responsible} />
+      <BusinessHeader overview={overview} responsible={responsible} allTasks={allTasks} today={today} />
       <BusinessDetailTabs tabs={tabs} defaultValue={defaultTab} />
     </div>
   );
@@ -295,40 +309,6 @@ function RenewalsTab({ overview, today }: { overview: BusinessOverview; today: s
           </Card>
         );
       })}
-    </div>
-  );
-}
-
-function TasksTab({ overview, userById }: { overview: BusinessOverview; userById: Map<string, User> }) {
-  if (overview.tasks.length === 0) {
-    return <EmptyState title="Sem tarefas" description="Nenhuma tarefa ligada a este negócio ou aos seus projetos." />;
-  }
-
-  const sorted = [...overview.tasks].sort((a, b) => {
-    if (a.dueDate === null) return 1;
-    if (b.dueDate === null) return -1;
-    return a.dueDate < b.dueDate ? -1 : 1;
-  });
-
-  return (
-    <div className="flex flex-col gap-3">
-      {sorted.map((task) => (
-        <Card key={task.id}>
-          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-            <div>
-              <p className="text-sm font-medium text-foreground">{task.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {userById.get(task.assigneeId)?.name ?? "—"} ·{" "}
-                {task.dueDate ? formatDateDisplay(task.dueDate) : "Sem data"}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {task.waitingReason && <WaitingReasonTag reason={task.waitingReason} />}
-              <WorkStatusBadge status={task.status} />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
     </div>
   );
 }
