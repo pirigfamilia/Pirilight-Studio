@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
 interface PageHeaderProps {
-  title: string;
+  /** Normalmente uma string; `ReactNode` (Round 7) só para o Dashboard, cujo título é reativo ao perfil ativo. */
+  title: ReactNode;
   description?: string;
   action?: ReactNode;
   tabs?: ReactNode;
