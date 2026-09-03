@@ -3,6 +3,8 @@ import type {
   CardType,
   DealStage,
   DesignStatus,
+  GoalStatus,
+  GoalTimeframe,
   LifecycleStatus,
   PaymentStatus,
   Priority,
@@ -141,6 +143,18 @@ export const RENEWAL_CADENCE_LABELS = {
   biennial: "Bienal",
 } satisfies Record<RenewalCadence, string>;
 
+/** Round 8 — período de um Goal (`lib/validation/goal.ts`). Só os 2 valores reais do schema. */
+export const GOAL_TIMEFRAME_LABELS = {
+  quarter: "Trimestre",
+  year: "Ano",
+} satisfies Record<GoalTimeframe, string>;
+
+/** Round 8 — estado derivado de um Goal (`goal-board.ts#deriveGoalStatus`), nunca guardado. */
+export const GOAL_STATUS_LABELS = {
+  in_progress: "Em curso",
+  done: "Concluído",
+} satisfies Record<GoalStatus, string>;
+
 export const URGENCY_LABELS = {
   overdue: "Atrasado",
   due_today: "Hoje",
@@ -202,4 +216,12 @@ export function renewalStatusLabel(status: RenewalStatus): string {
 
 export function renewalCadenceLabel(cadence: RenewalCadence): string {
   return RENEWAL_CADENCE_LABELS[cadence];
+}
+
+export function goalTimeframeLabel(timeframe: GoalTimeframe): string {
+  return GOAL_TIMEFRAME_LABELS[timeframe];
+}
+
+export function goalStatusLabel(status: GoalStatus): string {
+  return GOAL_STATUS_LABELS[status];
 }

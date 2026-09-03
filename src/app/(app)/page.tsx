@@ -21,14 +21,15 @@ export const dynamic = "force-dynamic";
 const WEEKDAY_FORMATTER = new Intl.DateTimeFormat("pt-PT", { weekday: "long" });
 
 /**
- * Dashboard — versão real (Round 7).
+ * Dashboard — versão real (Round 7; Objetivos ligado a `useGoalStore` no
+ * Round 8).
  *
  * Mesma estrutura de secções do placeholder (Round 1, plano secção 8), agora
  * alimentada por `attention-rules.ts` (Round 2, sem alterações) sobre dados
- * ao vivo: Business/Deal/Payment/MaintenanceRequest/Goal/User são só de
- * leitura nesta fase (sem store própria) e vêm direto do servidor;
- * Task/Project/Renewal semeiam as mesmas stores já usadas em `/tasks`,
- * `/websites`, `/piricards` e `/renewals` — o `DashboardBoard` (cliente) faz
+ * ao vivo: Business/Deal/Payment/MaintenanceRequest/User são só de leitura
+ * nesta fase (sem store própria) e vêm direto do servidor; Task/Project/
+ * Renewal/Goal semeiam as mesmas stores já usadas em `/tasks`, `/websites`,
+ * `/piricards`, `/renewals` e `/goals` — o `DashboardBoard` (cliente) faz
  * toda a agregação/apresentação.
  */
 export default async function DashboardPage() {
@@ -61,11 +62,11 @@ export default async function DashboardPage() {
         deals={deals}
         payments={payments}
         maintenanceRequests={maintenanceRequests}
-        goals={goals}
         users={users}
         initialTasks={tasks}
         initialProjects={projects}
         initialRenewals={renewals}
+        initialGoals={goals}
         today={today}
       />
     </div>

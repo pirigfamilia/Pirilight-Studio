@@ -77,4 +77,6 @@ export type {
   ProjectOverview,
   RenewalTiming,
   RenewalListRow,
+  GoalStatus,
+  GoalNextAction,
 } from "./views";

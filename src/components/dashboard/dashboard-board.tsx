@@ -36,6 +36,7 @@ import { projectDetailHref } from "@/lib/data/project-overview";
 import { renewalTypeLabel, workStatusLabel } from "@/lib/constants/labels";
 import { diffCalendarDays } from "@/lib/utils/date";
 import { isOpenDealStage } from "@/lib/validation/deal";
+import { useGoalStore } from "@/store/use-goal-store";
 import { useProjectStore } from "@/store/use-project-store";
 import { useRenewalStore } from "@/store/use-renewal-store";
 import { useTaskStore } from "@/store/use-task-store";
@@ -58,12 +59,12 @@ interface DashboardBoardProps {
   deals: Deal[];
   payments: Payment[];
   maintenanceRequests: MaintenanceRequest[];
-  goals: Goal[];
   users: User[];
   /** Snapshots globais do servidor — só para semear as stores se ainda não estiverem inicializadas. */
   initialTasks: Task[];
   initialProjects: Project[];
   initialRenewals: Renewal[];
+  initialGoals: Goal[];
   today: string;
 }
 
@@ -72,21 +73,23 @@ interface DashboardBoardProps {
  * (Round 1, plano secção 8), agora com dados a sério. A lógica de urgência
  * continua a viver, sem alterações, em `lib/data/attention-rules.ts`
  * (Round 2) — este componente só a chama com os arrays certos e apresenta o
- * resultado. Live: Task/Project/Renewal vêm das mesmas stores já usadas em
- * `/tasks`, `/websites`, `/piricards` e `/renewals`, para uma mudança feita
- * em qualquer um desses sítios aparecer aqui de imediato, sem reload — a
- * mesma disciplina do Round 5.1/6 aplicada ao resumo do topo.
+ * resultado. Live: Task/Project/Renewal/Goal (Round 8) vêm das mesmas stores
+ * já usadas em `/tasks`, `/websites`, `/piricards`, `/renewals` e `/goals`,
+ * para uma mudança feita em qualquer um desses sítios aparecer aqui de
+ * imediato, sem reload — a mesma disciplina do Round 5.1/6 aplicada ao
+ * resumo do topo. Business/Deal/Payment/MaintenanceRequest continuam só de
+ * leitura nesta fase (sem store própria).
  */
 export function DashboardBoard({
   businesses,
   deals,
   payments,
   maintenanceRequests,
-  goals,
   users,
   initialTasks,
   initialProjects,
   initialRenewals,
+  initialGoals,
   today,
 }: DashboardBoardProps) {
   const initializeTasks = useTaskStore((state) => state.initialize);
@@ -95,11 +98,14 @@ export function DashboardBoard({
   const liveProjects = useProjectStore((state) => state.projects);
   const initializeRenewals = useRenewalStore((state) => state.initialize);
   const liveRenewals = useRenewalStore((state) => state.renewals);
+  const initializeGoals = useGoalStore((state) => state.initialize);
+  const liveGoals = useGoalStore((state) => state.goals);
 
   useEffect(() => {
     initializeTasks(initialTasks);
     initializeProjects(initialProjects);
     initializeRenewals(initialRenewals);
+    initializeGoals(initialGoals);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -225,7 +231,7 @@ export function DashboardBoard({
     [liveRenewals, projectById, businessById, today],
   );
 
-  const topGoals = useMemo(() => [...goals].sort((a, b) => a.progress - b.progress).slice(0, 3), [goals]);
+  const topGoals = useMemo(() => [...liveGoals].sort((a, b) => a.progress - b.progress).slice(0, 3), [liveGoals]);
 
   return (
     <div className="flex flex-col gap-8">

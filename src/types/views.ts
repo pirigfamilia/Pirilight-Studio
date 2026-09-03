@@ -294,3 +294,28 @@ export interface RenewalListRow {
   responsibleUserId: string | null;
   timing: RenewalTiming | null;
 }
+
+/**
+ * Estado de um Goal (Round 8) — **nunca guardado**, sempre derivado de
+ * `progress` (`goal-board.ts#deriveGoalStatus`). Mesmo padrão de
+ * `BusinessOverallStatus`: um enum de vista, não uma coluna.
+ */
+export const GOAL_STATUSES = ["in_progress", "done"] as const;
+export type GoalStatus = (typeof GOAL_STATUSES)[number];
+
+/**
+ * A próxima ação interna de um Goal — resolvida só a partir das Tasks
+ * ligadas (`goal.linkedTaskIds`), reaproveitando `deriveNextAction` sem o
+ * duplicar (`goal-board.ts#deriveGoalNextAction`). Ao contrário de `NextAction`
+ * (Business/Project), aqui "sem candidato" pode significar duas coisas
+ * distintas — nenhuma Task por fazer (`kind: "none"`) ou todas à espera do
+ * cliente (`kind: "waiting_on_client"`, nunca lido como atraso nosso) — daí o
+ * campo `kind` próprio em vez de reaproveitar `NextAction["source"]`.
+ */
+export interface GoalNextAction {
+  kind: "task" | "waiting_on_client" | "none";
+  title: string;
+  urgency: RankedUrgency | null;
+  daysDelta: number | null;
+  waitingReason: WaitingReason | null;
+}

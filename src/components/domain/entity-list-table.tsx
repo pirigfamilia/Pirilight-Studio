@@ -23,6 +23,13 @@ interface EntityListTableProps<T> {
   rowKey: (row: T) => string;
   renderMobileCard: (row: T) => ReactNode;
   emptyState?: ReactNode;
+  /**
+   * Round 8 (Objetivos): quando definido, a linha inteira (desktop e mobile)
+   * abre o detalhe ao clicar — usado por listas totalmente client-side sem
+   * `<Link>` próprio em nenhuma célula. Opcional e sem efeito em quem não o
+   * passa (Clientes, Tarefas, Renovações, Projetos continuam exatamente iguais).
+   */
+  onRowClick?: (row: T) => void;
 }
 
 export function EntityListTable<T>({
@@ -31,6 +38,7 @@ export function EntityListTable<T>({
   rowKey,
   renderMobileCard,
   emptyState,
+  onRowClick,
 }: EntityListTableProps<T>) {
   if (rows.length === 0 && emptyState) {
     return <>{emptyState}</>;
@@ -51,7 +59,11 @@ export function EntityListTable<T>({
           </thead>
           <tbody className="divide-y divide-border">
             {rows.map((row) => (
-              <tr key={rowKey(row)} className="transition-colors hover:bg-accent/40">
+              <tr
+                key={rowKey(row)}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={cn("transition-colors hover:bg-accent/40", onRowClick && "cursor-pointer")}
+              >
                 {columns.map((column) => (
                   <td key={column.header} className={cn("px-4 py-3 align-middle", column.className)}>
                     {column.cell(row)}
@@ -65,7 +77,13 @@ export function EntityListTable<T>({
 
       <div className="flex flex-col gap-3 md:hidden">
         {rows.map((row) => (
-          <div key={rowKey(row)}>{renderMobileCard(row)}</div>
+          <div
+            key={rowKey(row)}
+            onClick={onRowClick ? () => onRowClick(row) : undefined}
+            className={onRowClick ? "cursor-pointer" : undefined}
+          >
+            {renderMobileCard(row)}
+          </div>
         ))}
       </div>
     </>
