@@ -72,7 +72,8 @@ export const PROJECT_TYPE_LABELS = {
 
 export const RENEWAL_TYPE_LABELS = {
   domain: "Domínio",
-  hosting: "Hosting",
+  // Round 7.1: só o label muda — o valor interno do enum continua "hosting".
+  hosting: "Alojamento",
   card_subscription: "Subscrição PiriCard",
   maintenance_plan: "Plano de manutenção",
 } satisfies Record<RenewalType, string>;

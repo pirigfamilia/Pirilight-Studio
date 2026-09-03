@@ -154,14 +154,20 @@ export function DashboardBoard({
         href: "/commercial",
       },
       {
+        // Round 7.1: não há uma listagem transversal de Projects bloqueados
+        // (podem ser Website ou PiriCard); /clients já mostra o estado geral
+        // "Bloqueado" por negócio — destino existente mais coerente, sem
+        // inventar uma rota nova nem infraestrutura de query params.
         label: "Projetos bloqueados",
         value: blockedProjectsCount,
         icon: PauseCircle,
         tone: "text-destructive",
-        href: null,
+        href: "/clients",
       },
       {
-        label: "Renovações próximas",
+        // Round 7.1: label esclarece a janela (30 dias) para não se ler como
+        // o mesmo total do painel "Renovações" abaixo, que usa 60 dias.
+        label: "Renovações a 30 dias",
         value: attentionItems.filter((item) => item.kind === "renewal").length,
         icon: RefreshCw,
         tone: "text-info",
@@ -394,7 +400,7 @@ export function DashboardBoard({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <RefreshCw className="h-4 w-4 text-info" /> Renovações
+                <RefreshCw className="h-4 w-4 text-info" /> Renovações · próximos 60 dias
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col divide-y divide-border p-0">
@@ -420,11 +426,11 @@ export function DashboardBoard({
             </CardContent>
           </Card>
 
-          {/* 8. Goals */}
+          {/* 8. Goals — título visível em PT-PT (Round 7.1); nomes internos (Goal, topGoals, getGoals) mantêm-se em inglês. */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Target className="h-4 w-4 text-info" /> Goals
+                <Target className="h-4 w-4 text-info" /> Objetivos
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
@@ -500,9 +506,31 @@ function displayTitle(item: AttentionItem): string {
  * por item de Task/Renewal/Payment/Manutenção); um `deal` já pode ir direto
  * à aba Comercial do Business Detail, que existe desde o Round 3.
  */
-function resolveItemHref(item: AttentionItem): string {
-  if (item.kind === "deal" && item.businessId !== null) {
-    return `/businesses/${item.businessId}?tab=commercial`;
+/**
+ * Round 7.1 — `AttentionItem.href` (definido em `attention-rules.ts`, não
+ * tocado aqui) aponta sempre para a lista do género; onde já existe um
+ * contexto funcional mais específico e sem alterar essa estrutura, o
+ * Dashboard usa-o em vez do destino genérico:
+ * - `deal` → aba Comercial do Business Detail (já existia desde o Round 7)
+ * - `payment` → aba Pagamentos do Business Detail (Finance ainda não é
+ *   funcional — nunca se deve levar para lá)
+ * - `maintenance` → Business Detail (sem aba própria para Manutenção nem
+ *   `projectId` no `AttentionItem` — este é o destino mínimo com contexto
+ *   real, sem alterar `attention-rules.ts`)
+ * Sem `businessId`, cai sempre no `item.href` original (`/tasks`,
+ * `/renewals`, `/commercial`, `/finance`, `/maintenance`).
+ */
+export function resolveItemHref(item: AttentionItem): string {
+  if (item.businessId === null) return item.href;
+
+  switch (item.kind) {
+    case "deal":
+      return `/businesses/${item.businessId}?tab=commercial`;
+    case "payment":
+      return `/businesses/${item.businessId}?tab=payments`;
+    case "maintenance":
+      return `/businesses/${item.businessId}`;
+    default:
+      return item.href;
   }
-  return item.href;
 }

@@ -132,8 +132,8 @@ export function RenewalsBoard({ initialRows, projects, businesses, deals, users,
       <RenewalListSection title="Em atraso" items={buckets.overdue} today={today} userById={userById} onEdit={setEditingRenewal} />
       <RenewalListSection title="Hoje" items={buckets.dueToday} today={today} userById={userById} onEdit={setEditingRenewal} />
       <RenewalListSection title="Próximos 7 dias" items={buckets.dueSoon} today={today} userById={userById} onEdit={setEditingRenewal} />
-      <RenewalListSection title="Próximos 30 dias" items={buckets.upcoming} today={today} userById={userById} onEdit={setEditingRenewal} />
-      <RenewalListSection title="Próximos 60 dias" items={buckets.sixtyDays} today={today} userById={userById} onEdit={setEditingRenewal} />
+      <RenewalListSection title="8–30 dias" items={buckets.upcoming} today={today} userById={userById} onEdit={setEditingRenewal} />
+      <RenewalListSection title="31–60 dias" items={buckets.sixtyDays} today={today} userById={userById} onEdit={setEditingRenewal} />
       <RenewalListSection title="Mais tarde" items={buckets.later} today={today} userById={userById} onEdit={setEditingRenewal} />
       <RenewalListSection
         key={`renewed-${filters.status}`}
@@ -203,7 +203,7 @@ function SummaryCounters({
       onClick: () => onChangeFilters((prev) => ({ ...prev, time: prev.time === "week" ? "all" : "week" })),
     },
     {
-      label: "Próximos 30 dias",
+      label: "8–30 dias",
       count: buckets.upcoming.length,
       active: filters.time === "month",
       onClick: () => onChangeFilters((prev) => ({ ...prev, time: prev.time === "month" ? "all" : "month" })),

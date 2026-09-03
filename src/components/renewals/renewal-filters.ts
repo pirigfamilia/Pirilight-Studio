@@ -10,13 +10,20 @@ import type { RenewalListRow, RenewalStatus } from "@/types";
 
 export type RenewalTimeFilter = "all" | "overdue" | "today" | "week" | "month" | "sixty_days";
 
+/**
+ * Round 7.1 — os labels "30 dias"/"60 dias" liam-se como janelas cumulativas
+ * (0–30, 0–60), mas cada opção é um balde exclusivo (ver
+ * `matchesRenewalTimeFilter`): "month" é só 8–30 dias, "sixty_days" é só
+ * 31–60. Os labels passam a dizer exatamente isso — sem mudar nenhum
+ * intervalo, só a forma como se lê.
+ */
 export const RENEWAL_TIME_FILTERS: { value: RenewalTimeFilter; label: string }[] = [
   { value: "all", label: "Todas" },
   { value: "overdue", label: "Em atraso" },
   { value: "today", label: "Hoje" },
   { value: "week", label: "7 dias" },
-  { value: "month", label: "30 dias" },
-  { value: "sixty_days", label: "60 dias" },
+  { value: "month", label: "8–30 dias" },
+  { value: "sixty_days", label: "31–60 dias" },
 ];
 
 export type RenewalStatusFilter = "all" | RenewalStatus;
