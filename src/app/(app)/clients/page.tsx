@@ -9,6 +9,7 @@ import {
   getMaintenanceRequestsByBusinessId,
   getProjects,
   getProjectsByBusinessId,
+  getRenewals,
   getTasks,
   getUsers,
 } from "@/lib/data";
@@ -20,11 +21,12 @@ export const dynamic = "force-dynamic";
 export default async function ClientsPage() {
   const now = new Date();
   const businesses = await getClientBusinesses(now);
-  const [summaries, users, allProjects, allTasks] = await Promise.all([
+  const [summaries, users, allProjects, allTasks, allRenewals] = await Promise.all([
     getBusinessSummaries(businesses, now),
     getUsers(now),
     getProjects(now),
     getTasks(now),
+    getRenewals(now),
   ]);
 
   const nameByUserId = new Map(users.map((user) => [user.id, user.name]));
@@ -61,7 +63,13 @@ export default async function ClientsPage() {
         title="Clientes"
         description="Clientes, projetos, pagamentos e renovações num só lugar."
       />
-      <ClientsBoard rows={rows} initialProjects={allProjects} initialTasks={allTasks} />
+      <ClientsBoard
+        rows={rows}
+        initialProjects={allProjects}
+        initialTasks={allTasks}
+        initialRenewals={allRenewals}
+        today={today}
+      />
     </div>
   );
 }

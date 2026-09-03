@@ -20,6 +20,7 @@ export * from "./attention";
 export * from "./business-overview";
 export * from "./task-board";
 export * from "./project-overview";
+export * from "./renewal-board";
 export {
   ATTENTION_WINDOW_DAYS,
   RENEWALS_PANEL_WINDOW_DAYS,

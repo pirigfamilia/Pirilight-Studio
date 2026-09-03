@@ -20,12 +20,14 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { deriveNextAction } from "@/lib/data/business-overview";
 import { projectDetailHref } from "@/lib/data/project-overview";
+import { getNextPendingRenewalForProjects } from "@/lib/data/renewal-board";
 import { designStatusLabel, renewalTypeLabel, shippingStatusLabel } from "@/lib/constants/labels";
 import { formatDateDisplay } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/store/use-project-store";
+import { useRenewalStore } from "@/store/use-renewal-store";
 import { useTaskStore } from "@/store/use-task-store";
-import type { NextAction, Project, ProjectListRow, ProjectType, Task, User } from "@/types";
+import type { NextAction, Project, ProjectListRow, ProjectType, Renewal, Task, User } from "@/types";
 
 interface ProjectsBoardProps {
   type: ProjectType;
@@ -33,6 +35,7 @@ interface ProjectsBoardProps {
   /** Snapshots globais do servidor — só para semear as stores se ainda não estiverem inicializadas. */
   initialProjects: Project[];
   initialTasks: Task[];
+  initialRenewals: Renewal[];
   users: User[];
   today: string;
 }
@@ -45,18 +48,31 @@ interface ProjectsBoardProps {
  *
  * A "próxima ação"/"tarefas abertas" de cada linha são recalculadas ao vivo
  * com a MESMA `deriveNextAction` (nunca duplicada) sobre as Tasks lidas da
- * `useTaskStore`; o resto da linha (pagamento, renovação, responsável) fica
- * como veio do servidor — não é editável nesta fase.
+ * `useTaskStore`; a "próxima renovação" (Round 6, secção 24) é recalculada
+ * ao vivo da mesma forma, via `getNextPendingRenewalForProjects` sobre a
+ * `useRenewalStore` — o resto da linha (pagamento, responsável) fica como
+ * veio do servidor, não é editável nesta fase.
  */
-export function ProjectsBoard({ type, initialRows, initialProjects, initialTasks, users, today }: ProjectsBoardProps) {
+export function ProjectsBoard({
+  type,
+  initialRows,
+  initialProjects,
+  initialTasks,
+  initialRenewals,
+  users,
+  today,
+}: ProjectsBoardProps) {
   const initializeProjects = useProjectStore((state) => state.initialize);
   const liveProjects = useProjectStore((state) => state.projects);
   const initializeTasks = useTaskStore((state) => state.initialize);
   const allTasks = useTaskStore((state) => state.tasks);
+  const initializeRenewals = useRenewalStore((state) => state.initialize);
+  const allRenewals = useRenewalStore((state) => state.renewals);
 
   useEffect(() => {
     initializeProjects(initialProjects);
     initializeTasks(initialTasks);
+    initializeRenewals(initialRenewals);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -86,9 +102,10 @@ export function ProjectsBoard({ type, initialRows, initialProjects, initialTasks
           { tasks: tasksForProject, maintenanceRequests: row.maintenanceRequests },
           today,
         );
-        return { ...row, project: liveProject, openTasksCount, nextAction };
+        const nextRenewal = getNextPendingRenewalForProjects(allRenewals, [row.project.id]);
+        return { ...row, project: liveProject, openTasksCount, nextAction, nextRenewal };
       }),
-    [initialRows, liveProjectById, tasksByProjectId, today],
+    [initialRows, liveProjectById, tasksByProjectId, allRenewals, today],
   );
 
   const filteredRows = useMemo(() => filterProjectRows(rows, filters), [rows, filters]);

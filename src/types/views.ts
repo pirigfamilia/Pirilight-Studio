@@ -268,3 +268,29 @@ export interface ProjectOverview extends ProjectListRow {
   renewals: Renewal[];
   payments: Payment[];
 }
+
+/**
+ * Urgência operacional de uma Renewal `pending` (Round 6) — só usada por
+ * `/renewals` (contadores, filtros, hierarquia). **Não** é o `Urgency`
+ * global de `attention-rules.ts`/`getAttentionItems()`, que continua com a
+ * sua própria janela (30 dias) e os seus 4 valores — este ecrã tem uma
+ * escala mais rica (`upcoming` entre 8–30 dias, `future` para além disso)
+ * porque é o painel dedicado, não o feed de atenção. `renewed`/`cancelled`
+ * nunca têm timing — `null`.
+ */
+export const RENEWAL_TIMINGS = ["overdue", "due_today", "due_soon", "upcoming", "future"] as const;
+export type RenewalTiming = (typeof RENEWAL_TIMINGS)[number];
+
+/**
+ * Uma linha de `/renewals` — a Renewal já junta com o Project/Business a que
+ * pertence (Renewal → Project → Business, nunca ao contrário) e o
+ * responsável, derivado do Business (`deriveResponsibleUserId`) — nunca um
+ * campo próprio da Renewal.
+ */
+export interface RenewalListRow {
+  renewal: Renewal;
+  project: Project;
+  business: Business;
+  responsibleUserId: string | null;
+  timing: RenewalTiming | null;
+}

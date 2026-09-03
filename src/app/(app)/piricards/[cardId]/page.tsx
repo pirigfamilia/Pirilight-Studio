@@ -6,7 +6,7 @@ import { PiriCardProductionInfo } from "@/components/projects/piricard-productio
 import { ProjectDetailHeader } from "@/components/projects/project-detail-header";
 import { ProjectRenewalsList } from "@/components/projects/project-renewals-list";
 import { ProjectTasksSection } from "@/components/projects/project-tasks-section";
-import { getProjectOverview, getProjects, getTasks, getUsers } from "@/lib/data";
+import { getProjectOverview, getProjects, getRenewals, getTasks, getUsers } from "@/lib/data";
 import { todayIso } from "@/lib/utils/date";
 
 // Pagamento, renovação e próxima ação dependem do dia de hoje — sem prerender estático.
@@ -25,7 +25,12 @@ export default async function PiriCardDetailPage({ params }: PiriCardDetailPageP
     notFound();
   }
 
-  const [projects, tasks, users] = await Promise.all([getProjects(now), getTasks(now), getUsers(now)]);
+  const [projects, tasks, users, renewals] = await Promise.all([
+    getProjects(now),
+    getTasks(now),
+    getUsers(now),
+    getRenewals(now),
+  ]);
   const userById = new Map(users.map((user) => [user.id, user]));
   const today = todayIso(now);
 
@@ -54,9 +59,12 @@ export default async function PiriCardDetailPage({ params }: PiriCardDetailPageP
         <PaymentProgress summary={overview.paymentSummary} />
       </SectionCard>
 
-      <SectionCard title="Renovação">
-        <ProjectRenewalsList renewals={overview.renewals} />
-      </SectionCard>
+      <ProjectRenewalsList
+        business={overview.business}
+        project={overview.project}
+        initialRenewals={renewals}
+        today={today}
+      />
 
       <SectionCard title="Produção PiriCard">
         <PiriCardProductionInfo piriCard={overview.piriCard} />

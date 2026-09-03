@@ -5,8 +5,9 @@ import { BusinessDetailTabs } from "@/components/businesses/business-detail-tabs
 import { BusinessHeader } from "@/components/businesses/business-header";
 import { BusinessTasksTab } from "@/components/businesses/business-tasks-tab";
 import { DealHistoryRow } from "@/components/businesses/deal-history-row";
+import { LiveBusinessRenewals } from "@/components/businesses/live-business-renewals";
 import { LiveProjectsTab } from "@/components/businesses/live-projects-tab";
-import { FollowUpStatus } from "@/components/domain/follow-up-status";
+import { LiveUpcomingEvents } from "@/components/businesses/live-upcoming-events";
 import { PaymentProgress } from "@/components/domain/payment-progress";
 import { WaitingReasonTag } from "@/components/domain/waiting-reason-tag";
 import { WorkStatusBadge } from "@/components/domain/work-status-badge";
@@ -14,18 +15,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PAYMENT_STATUS_LABELS } from "@/lib/constants/labels";
-import {
-  RENEWALS_PANEL_WINDOW_DAYS,
-  classifyUrgency,
-  getBusinessOverview,
-  getProjects,
-  getTasks,
-  getUsers,
-} from "@/lib/data";
+import { getBusinessOverview, getProjects, getRenewals, getTasks, getUsers } from "@/lib/data";
 import { derivePaymentStatus } from "@/lib/utils/payment";
 import { diffCalendarDays, todayIso } from "@/lib/utils/date";
 import { formatDateDisplay, formatEuros } from "@/lib/utils/format";
-import type { BusinessOverview, PaymentStatus, User } from "@/types";
+import type { BusinessOverview, PaymentStatus, Renewal, User } from "@/types";
 
 // A urgência de follow-ups, renovações e pagamentos depende do dia de hoje —
 // sem prerender estático.
@@ -49,14 +43,26 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   const overview = await getBusinessOverview(businessId, now);
   if (overview === null) notFound();
 
-  const [users, allTasks, allProjects] = await Promise.all([getUsers(now), getTasks(now), getProjects(now)]);
+  const [users, allTasks, allProjects, allRenewals] = await Promise.all([
+    getUsers(now),
+    getTasks(now),
+    getProjects(now),
+    getRenewals(now),
+  ]);
   const userById = new Map(users.map((user) => [user.id, user]));
   const today = todayIso(now);
   const responsible = overview.responsibleUserId ? userById.get(overview.responsibleUserId) : undefined;
   const projects = overview.projects.map((item) => item.project);
+  const projectIds = projects.map((project) => project.id);
 
   const tabs: BusinessDetailTabDef[] = [
-    { value: "overview", label: "Visão geral", content: <OverviewTab overview={overview} today={today} /> },
+    {
+      value: "overview",
+      label: "Visão geral",
+      content: (
+        <OverviewTab overview={overview} today={today} projectIds={projectIds} initialRenewals={allRenewals} />
+      ),
+    },
     { value: "contacts", label: "Contactos", content: <ContactsTab overview={overview} /> },
     {
       value: "commercial",
@@ -68,7 +74,11 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       label: "Projetos",
       content: <LiveProjectsTab projects={overview.projects} initialProjects={allProjects} />,
     },
-    { value: "renewals", label: "Renovações", content: <RenewalsTab overview={overview} today={today} /> },
+    {
+      value: "renewals",
+      label: "Renovações",
+      content: <LiveBusinessRenewals projects={projects} initialRenewals={allRenewals} today={today} />,
+    },
     {
       value: "tasks",
       label: "Tarefas",
@@ -108,33 +118,35 @@ function SectionTitle({ children }: { children: string }) {
   return <h2 className="mb-3 text-sm font-semibold text-foreground">{children}</h2>;
 }
 
-function OverviewTab({ overview, today }: { overview: BusinessOverview; today: string }) {
+function OverviewTab({
+  overview,
+  today,
+  projectIds,
+  initialRenewals,
+}: {
+  overview: BusinessOverview;
+  today: string;
+  projectIds: string[];
+  initialRenewals: Renewal[];
+}) {
   const activity = buildRecentActivity(overview).slice(0, 5);
   const activeProjects = overview.projects.filter((p) => p.project.status !== "done");
   const attentionProjects = overview.projects.filter(
     (p) => p.project.status === "blocked" || p.project.status === "waiting_on_client",
   );
-  const upcoming = buildUpcomingEvents(overview, today).slice(0, 4);
+  const staticEvents = buildUpcomingEvents(overview, today);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card>
         <CardContent className="p-4">
           <SectionTitle>Próximos eventos</SectionTitle>
-          {upcoming.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nada agendado nos próximos tempos.</p>
-          ) : (
-            <ul className="flex flex-col gap-2.5">
-              {upcoming.map((event) => (
-                <li key={event.text} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-foreground">{event.text}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {formatDateDisplay(event.date)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <LiveUpcomingEvents
+            staticEvents={staticEvents}
+            projectIds={projectIds}
+            initialRenewals={initialRenewals}
+            today={today}
+          />
         </CardContent>
       </Card>
 
@@ -262,54 +274,6 @@ function CommercialTab({
   );
 }
 
-function RenewalsTab({ overview, today }: { overview: BusinessOverview; today: string }) {
-  if (overview.renewals.length === 0) {
-    return <EmptyState title="Sem renovações" description="Nenhum dos projetos deste negócio tem renovações registadas." />;
-  }
-
-  const sorted = [...overview.renewals].sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1));
-
-  return (
-    <div className="flex flex-col gap-3">
-      {sorted.map((renewal) => {
-        const isPending = renewal.status === "pending";
-        const urgency = isPending
-          ? classifyUrgency(renewal.dueDate, today, RENEWALS_PANEL_WINDOW_DAYS)
-          : null;
-        const daysDelta = isPending ? diffCalendarDays(renewal.dueDate, today) : null;
-
-        return (
-          <Card key={renewal.id}>
-            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  {renewal.type === "domain"
-                    ? "Domínio"
-                    : renewal.type === "hosting"
-                      ? "Hosting"
-                      : renewal.type === "card_subscription"
-                        ? "Subscrição PiriCard"
-                        : "Plano de manutenção"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatDateDisplay(renewal.dueDate)} · {formatEuros(renewal.amount)}
-                </p>
-              </div>
-              {isPending ? (
-                <FollowUpStatus urgency={urgency} daysDelta={daysDelta} />
-              ) : (
-                <Badge variant={renewal.status === "renewed" ? "success" : "muted"}>
-                  {renewal.status === "renewed" ? "Renovada" : "Cancelada"}
-                </Badge>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
-}
-
 function PaymentsTab({ overview, today }: { overview: BusinessOverview; today: string }) {
   return (
     <div className="flex flex-col gap-4">
@@ -360,6 +324,12 @@ function buildRecentActivity(overview: BusinessOverview): { date: string; text: 
   return items.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
+/**
+ * Eventos de Deal/Task da Visão geral — estáticos (não vêm de nenhuma store,
+ * por isso não precisam de reatividade). Os eventos de Renewal são
+ * calculados à parte, ao vivo, por `LiveUpcomingEvents` (Round 6, secção 21)
+ * — só essa fatia precisa de reagir a `useRenewalStore`.
+ */
 function buildUpcomingEvents(
   overview: BusinessOverview,
   today: string,
@@ -368,10 +338,6 @@ function buildUpcomingEvents(
 
   if (overview.openDeal?.nextActionDate) {
     events.push({ date: overview.openDeal.nextActionDate, text: overview.openDeal.nextAction ?? "Follow-up" });
-  }
-  for (const renewal of overview.renewals) {
-    if (renewal.status !== "pending") continue;
-    events.push({ date: renewal.dueDate, text: `Renovação — ${renewal.type}` });
   }
   for (const task of overview.tasks) {
     if (task.dueDate === null || task.status === "done" || task.status === "waiting_on_client") continue;

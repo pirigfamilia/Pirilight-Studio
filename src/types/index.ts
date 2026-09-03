@@ -75,4 +75,6 @@ export type {
   TaskWithDetail,
   ProjectListRow,
   ProjectOverview,
+  RenewalTiming,
+  RenewalListRow,
 } from "./views";

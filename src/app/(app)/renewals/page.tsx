@@ -1,19 +1,34 @@
-import { RefreshCw } from "lucide-react";
-
 import { PageHeader } from "@/components/layout/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
+import { RenewalsBoard } from "@/components/renewals/renewals-board";
+import { getBusinesses, getDeals, getProjects, getRenewalsBoard, getUsers } from "@/lib/data";
+import { todayIso } from "@/lib/utils/date";
 
-export default function RenewalsPage() {
+// Contadores, filtros e urgência dependem do dia de hoje — sem prerender estático.
+export const dynamic = "force-dynamic";
+
+export default async function RenewalsPage() {
+  const now = new Date();
+  const [rows, businesses, projects, deals, users] = await Promise.all([
+    getRenewalsBoard(now),
+    getBusinesses(now),
+    getProjects(now),
+    getDeals(now),
+    getUsers(now),
+  ]);
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Renovações"
-        description="Domínios, hosting e subscrições — o que vence e quando, junto de todos os projetos."
+        description="Domínios, alojamentos, subscrições e planos que precisam de ser renovados."
       />
-      <EmptyState
-        icon={RefreshCw}
-        title="A estrutura está pronta"
-        description="A lista/timeline de renovações chega no próximo passo do plano."
+      <RenewalsBoard
+        initialRows={rows}
+        businesses={businesses}
+        projects={projects}
+        deals={deals}
+        users={users}
+        today={todayIso(now)}
       />
     </div>
   );

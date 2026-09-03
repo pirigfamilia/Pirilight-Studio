@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { ProjectsBoard } from "@/components/projects/projects-board";
-import { getProjects, getTasks, getUsers, getWebsitesBoard } from "@/lib/data";
+import { getProjects, getRenewals, getTasks, getUsers, getWebsitesBoard } from "@/lib/data";
 import { todayIso } from "@/lib/utils/date";
 
 // Pagamentos e renovações dependem do dia de hoje — sem prerender estático.
@@ -8,11 +8,12 @@ export const dynamic = "force-dynamic";
 
 export default async function WebsitesPage() {
   const now = new Date();
-  const [rows, projects, tasks, users] = await Promise.all([
+  const [rows, projects, tasks, users, renewals] = await Promise.all([
     getWebsitesBoard(now),
     getProjects(now),
     getTasks(now),
     getUsers(now),
+    getRenewals(now),
   ]);
 
   return (
@@ -26,6 +27,7 @@ export default async function WebsitesPage() {
         initialRows={rows}
         initialProjects={projects}
         initialTasks={tasks}
+        initialRenewals={renewals}
         users={users}
         today={todayIso(now)}
       />

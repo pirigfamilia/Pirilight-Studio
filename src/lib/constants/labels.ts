@@ -7,6 +7,7 @@ import type {
   PaymentStatus,
   Priority,
   ProjectType,
+  RenewalCadence,
   RenewalStatus,
   RenewalType,
   ShippingStatus,
@@ -132,6 +133,13 @@ export const RENEWAL_STATUS_LABELS = {
   cancelled: "Cancelada",
 } satisfies Record<RenewalStatus, string>;
 
+/** Round 6 — cadência de uma Renewal (`lib/validation/renewal.ts`). */
+export const RENEWAL_CADENCE_LABELS = {
+  monthly: "Mensal",
+  annual: "Anual",
+  biennial: "Bienal",
+} satisfies Record<RenewalCadence, string>;
+
 export const URGENCY_LABELS = {
   overdue: "Atrasado",
   due_today: "Hoje",
@@ -189,4 +197,8 @@ export function shippingStatusLabel(status: ShippingStatus): string {
 
 export function renewalStatusLabel(status: RenewalStatus): string {
   return RENEWAL_STATUS_LABELS[status];
+}
+
+export function renewalCadenceLabel(cadence: RenewalCadence): string {
+  return RENEWAL_CADENCE_LABELS[cadence];
 }

@@ -18,12 +18,16 @@ import { PaymentProgress } from "@/components/domain/payment-progress";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { RENEWALS_PANEL_WINDOW_DAYS } from "@/lib/data";
 import { renewalTypeLabel } from "@/lib/constants/labels";
+import { getNextPendingRenewalForProjects } from "@/lib/data/renewal-board";
+import { diffCalendarDays } from "@/lib/utils/date";
 import { formatDateDisplay } from "@/lib/utils/format";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/store/use-project-store";
+import { useRenewalStore } from "@/store/use-renewal-store";
 import { useTaskStore } from "@/store/use-task-store";
-import type { Project, Task } from "@/types";
+import type { Project, Renewal, Task } from "@/types";
 
 function matchesQuery(row: ClientListRow, query: string): boolean {
   if (query.trim().length === 0) return true;
@@ -36,24 +40,49 @@ interface ClientsBoardProps {
   /** Snapshots globais do servidor — só para semear as stores se ainda não estiverem inicializadas (D7). */
   initialProjects: Project[];
   initialTasks: Task[];
+  initialRenewals: Renewal[];
+  today: string;
 }
 
-export function ClientsBoard({ rows, initialProjects, initialTasks }: ClientsBoardProps) {
+export function ClientsBoard({ rows, initialProjects, initialTasks, initialRenewals, today }: ClientsBoardProps) {
   const initializeProjects = useProjectStore((state) => state.initialize);
   const initializeTasks = useTaskStore((state) => state.initialize);
+  const initializeRenewals = useRenewalStore((state) => state.initialize);
+  const allRenewals = useRenewalStore((state) => state.renewals);
 
   useEffect(() => {
     initializeProjects(initialProjects);
     initializeTasks(initialTasks);
+    initializeRenewals(initialRenewals);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ClientFilter>("all");
 
+  // Round 6, secção 22-23: "Próxima renovação" e o filtro "Com renovação
+  // próxima" deixam de ler o `BusinessSummary` congelado do servidor — cada
+  // linha é recalculada ao vivo a partir dos `projectIds` estruturais
+  // (estáveis) desse negócio contra a `useRenewalStore` atual. Mesma janela
+  // já existente (`RENEWALS_PANEL_WINDOW_DAYS`) — não se inventa uma regra nova.
+  const liveRows = useMemo(
+    () =>
+      rows.map((row) => {
+        const nextRenewal = getNextPendingRenewalForProjects(allRenewals, row.projectIds);
+        const hasUpcomingRenewal =
+          nextRenewal !== null && diffCalendarDays(nextRenewal.dueDate, today) <= RENEWALS_PANEL_WINDOW_DAYS;
+        return {
+          ...row,
+          hasUpcomingRenewal,
+          summary: { ...row.summary, nextRenewal },
+        };
+      }),
+    [rows, allRenewals, today],
+  );
+
   const filteredRows = useMemo(
-    () => rows.filter((row) => matchesQuery(row, query) && matchesFilter(row, filter)),
-    [rows, query, filter],
+    () => liveRows.filter((row) => matchesQuery(row, query) && matchesFilter(row, filter)),
+    [liveRows, query, filter],
   );
 
   return (
