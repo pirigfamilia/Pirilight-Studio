@@ -7,6 +7,7 @@ import { NextActionTiming } from "@/components/domain/next-action-timing";
 import { ProjectStatusMenu } from "@/components/projects/project-status-menu";
 import { deriveNextAction } from "@/lib/data/business-overview";
 import { buildTasksWithDetail } from "@/lib/data/task-board";
+import { useMaintenanceStore } from "@/store/use-maintenance-store";
 import { useProjectStore } from "@/store/use-project-store";
 import { useTaskStore } from "@/store/use-task-store";
 import type { Business, MaintenanceRequest, Project, Task } from "@/types";
@@ -14,8 +15,8 @@ import type { Business, MaintenanceRequest, Project, Task } from "@/types";
 interface ProjectDetailHeaderProps {
   project: Project;
   business: Business;
-  /** Já scoped a este projeto — nunca mutado nesta fase. */
-  maintenanceRequests: MaintenanceRequest[];
+  /** Snapshot GLOBAL do servidor — só para semear a `useMaintenanceStore` (Round 9). */
+  initialMaintenanceRequests: MaintenanceRequest[];
   /** Snapshots globais do servidor — só para semear as stores se ainda não estiverem inicializadas. */
   initialProjects: Project[];
   initialTasks: Task[];
@@ -35,7 +36,7 @@ interface ProjectDetailHeaderProps {
 export function ProjectDetailHeader({
   project,
   business,
-  maintenanceRequests,
+  initialMaintenanceRequests,
   initialProjects,
   initialTasks,
   today,
@@ -44,14 +45,22 @@ export function ProjectDetailHeader({
   const projects = useProjectStore((state) => state.projects);
   const initializeTasks = useTaskStore((state) => state.initialize);
   const allTasks = useTaskStore((state) => state.tasks);
+  const initializeMaintenance = useMaintenanceStore((state) => state.initialize);
+  const allMaintenanceRequests = useMaintenanceStore((state) => state.requests);
 
   useEffect(() => {
     initializeProjects(initialProjects);
     initializeTasks(initialTasks);
+    initializeMaintenance(initialMaintenanceRequests);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const liveProject = projects.find((p) => p.id === project.id) ?? project;
+
+  const maintenanceRequests = useMemo(
+    () => allMaintenanceRequests.filter((request) => request.projectId === project.id),
+    [allMaintenanceRequests, project.id],
+  );
 
   const tasksForProject = useMemo(() => {
     const withDetail = buildTasksWithDetail(allTasks, {

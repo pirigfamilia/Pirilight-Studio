@@ -42,6 +42,7 @@ describe("getAttentionItems sobre a mock real", () => {
       "due_soon:task:task-clinica-maintenance", // +4
       "due_soon:maintenance:mnt-clinica-horarios", // +4
       "due_soon:payment:pay-auto-eletrica-card", // +5
+      "due_soon:maintenance:mnt-talho-precos", // +5 (blocked, mas devido em breve — não escondido pelo estado)
       "due_soon:renewal:ren-beauty-subscription", // +12
       "due_soon:renewal:ren-ginasio-plan", // +28
       "stalled:deal:deal-optica-1", // sem contacto há 21 dias
@@ -95,6 +96,7 @@ describe("feeds derivados", () => {
     const items = await getWaitingOnClientItems(TEST_TODAY);
 
     expect(items.map((i) => `${i.kind}:${i.waitingReason}`).sort()).toEqual([
+      "maintenance:photos",
       "project:approval",
       "project:photos",
       "task:content",

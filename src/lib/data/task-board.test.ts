@@ -94,6 +94,7 @@ function makeMaintenanceRequest(overrides: Partial<MaintenanceRequest> = {}): Ma
     status: "todo",
     waitingReason: null,
     priority: "normal",
+    responsibleUserId: null,
     requestedAt: "2026-01-01",
     dueDate: null,
     ...audit,

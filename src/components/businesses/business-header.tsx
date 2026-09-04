@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { LiveOverallStatusBadge } from "@/components/businesses/live-overall-status-badge";
 import { NextActionStat } from "@/components/businesses/next-action-stat";
 import { LifecycleStatusBadge } from "@/components/domain/lifecycle-status-badge";
-import type { BusinessOverview, Project, Task, User } from "@/types";
+import type { BusinessOverview, MaintenanceRequest, Project, Task, User } from "@/types";
 
 function HeaderStat({ label, value, extra }: { label: string; value: string; extra?: ReactNode }) {
   return (
@@ -25,6 +25,7 @@ export function BusinessHeader({
   responsible,
   allTasks,
   allProjects,
+  allMaintenanceRequests,
   today,
 }: {
   overview: BusinessOverview;
@@ -33,6 +34,8 @@ export function BusinessHeader({
   allTasks: Task[];
   /** Snapshot global do servidor — só para semear a `useProjectStore`, ver `LiveOverallStatusBadge`. */
   allProjects: Project[];
+  /** Snapshot global do servidor — só para semear a `useMaintenanceStore` (Round 9). */
+  allMaintenanceRequests: MaintenanceRequest[];
   today: string;
 }) {
   const { business, primaryContact } = overview;
@@ -55,7 +58,7 @@ export function BusinessHeader({
           businessId={business.id}
           projectIds={projectIds}
           dealIds={dealIds}
-          maintenanceRequests={overview.maintenanceRequests}
+          initialMaintenanceRequests={allMaintenanceRequests}
           initialProjects={allProjects}
           initialTasks={allTasks}
           className="text-sm"
@@ -72,7 +75,7 @@ export function BusinessHeader({
           business={business}
           projects={overview.projects.map((item) => item.project)}
           deals={overview.deals}
-          maintenanceRequests={overview.maintenanceRequests}
+          initialMaintenanceRequests={allMaintenanceRequests}
           openDeal={overview.openDeal}
           lifecycleStatus={business.lifecycleStatus}
           initialTasks={allTasks}

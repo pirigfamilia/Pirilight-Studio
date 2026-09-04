@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { BusinessDetailTabDef } from "@/components/businesses/business-detail-tabs";
 import { BusinessDetailTabs } from "@/components/businesses/business-detail-tabs";
 import { BusinessHeader } from "@/components/businesses/business-header";
+import { BusinessMaintenanceTab } from "@/components/businesses/business-maintenance-tab";
 import { BusinessTasksTab } from "@/components/businesses/business-tasks-tab";
 import { DealHistoryRow } from "@/components/businesses/deal-history-row";
 import { LiveBusinessRenewals } from "@/components/businesses/live-business-renewals";
@@ -15,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PAYMENT_STATUS_LABELS } from "@/lib/constants/labels";
-import { getBusinessOverview, getProjects, getRenewals, getTasks, getUsers } from "@/lib/data";
+import { getBusinessOverview, getMaintenanceRequests, getProjects, getRenewals, getTasks, getUsers } from "@/lib/data";
 import { derivePaymentStatus } from "@/lib/utils/payment";
 import { diffCalendarDays, todayIso } from "@/lib/utils/date";
 import { formatDateDisplay, formatEuros } from "@/lib/utils/format";
@@ -43,11 +44,12 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
   const overview = await getBusinessOverview(businessId, now);
   if (overview === null) notFound();
 
-  const [users, allTasks, allProjects, allRenewals] = await Promise.all([
+  const [users, allTasks, allProjects, allRenewals, allMaintenanceRequests] = await Promise.all([
     getUsers(now),
     getTasks(now),
     getProjects(now),
     getRenewals(now),
+    getMaintenanceRequests(now),
   ]);
   const userById = new Map(users.map((user) => [user.id, user]));
   const today = todayIso(now);
@@ -96,6 +98,19 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
       ),
     },
     { value: "payments", label: "Pagamentos", content: <PaymentsTab overview={overview} today={today} /> },
+    {
+      value: "maintenance",
+      label: "Manutenção",
+      content: (
+        <BusinessMaintenanceTab
+          business={overview.business}
+          projects={projects}
+          users={users}
+          initialMaintenanceRequests={allMaintenanceRequests}
+          today={today}
+        />
+      ),
+    },
   ];
 
   const defaultTab = tabs.some((t) => t.value === tab) ? tab! : "overview";
@@ -107,6 +122,7 @@ export default async function BusinessDetailPage({ params, searchParams }: Busin
         responsible={responsible}
         allTasks={allTasks}
         allProjects={allProjects}
+        allMaintenanceRequests={allMaintenanceRequests}
         today={today}
       />
       <BusinessDetailTabs tabs={tabs} defaultValue={defaultTab} />

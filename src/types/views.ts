@@ -319,3 +319,37 @@ export interface GoalNextAction {
   daysDelta: number | null;
   waitingReason: WaitingReason | null;
 }
+
+/**
+ * Um pedido de manutenção com o Project/Business a que pertence já juntos
+ * (MaintenanceRequest → Project → Business, nunca ao contrário) — usada por
+ * `/maintenance` e pela tab Manutenção do Business Detail.
+ */
+export interface MaintenanceListRow {
+  request: MaintenanceRequest;
+  project: Project;
+  business: Business;
+}
+
+/**
+ * Classificação temporal de `/maintenance` (Round 9) — painel dedicado, não
+ * o `Urgency` global de `attention-rules.ts`/`getAttentionItems()` (que
+ * continua com a sua própria janela de 7 dias e os seus 4 valores, e nunca é
+ * tocado por este round). `waiting_on_client` e `done` saem sempre para as
+ * suas próprias secções, independentemente de `dueDate`; `blocked` só forma
+ * a sua própria secção quando não é já `overdue`/`due_today` (um pedido
+ * bloqueado E atrasado aparece em "Em atraso", com o badge vermelho
+ * "Bloqueado" — nunca duas secções para o mesmo pedido). `no_date` é para um
+ * pedido em aberto, não bloqueado, sem `dueDate`.
+ */
+export const MAINTENANCE_TIMINGS = [
+  "waiting_on_client",
+  "done",
+  "overdue",
+  "today",
+  "blocked",
+  "due_soon",
+  "future",
+  "no_date",
+] as const;
+export type MaintenanceTiming = (typeof MAINTENANCE_TIMINGS)[number];

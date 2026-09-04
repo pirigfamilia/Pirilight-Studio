@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import { PaymentProgress } from "@/components/domain/payment-progress";
 import { PiriCardProductionInfo } from "@/components/projects/piricard-production-info";
 import { ProjectDetailHeader } from "@/components/projects/project-detail-header";
+import { ProjectMaintenanceSection } from "@/components/projects/project-maintenance-section";
 import { ProjectRenewalsList } from "@/components/projects/project-renewals-list";
 import { ProjectTasksSection } from "@/components/projects/project-tasks-section";
-import { getProjectOverview, getProjects, getRenewals, getTasks, getUsers } from "@/lib/data";
+import { getMaintenanceRequests, getProjectOverview, getProjects, getRenewals, getTasks, getUsers } from "@/lib/data";
 import { todayIso } from "@/lib/utils/date";
 
 // Pagamento, renovação e próxima ação dependem do dia de hoje — sem prerender estático.
@@ -25,11 +26,12 @@ export default async function PiriCardDetailPage({ params }: PiriCardDetailPageP
     notFound();
   }
 
-  const [projects, tasks, users, renewals] = await Promise.all([
+  const [projects, tasks, users, renewals, maintenanceRequests] = await Promise.all([
     getProjects(now),
     getTasks(now),
     getUsers(now),
     getRenewals(now),
+    getMaintenanceRequests(now),
   ]);
   const userById = new Map(users.map((user) => [user.id, user]));
   const today = todayIso(now);
@@ -39,7 +41,7 @@ export default async function PiriCardDetailPage({ params }: PiriCardDetailPageP
       <ProjectDetailHeader
         project={overview.project}
         business={overview.business}
-        maintenanceRequests={overview.maintenanceRequests}
+        initialMaintenanceRequests={maintenanceRequests}
         initialProjects={projects}
         initialTasks={tasks}
         today={today}
@@ -63,6 +65,14 @@ export default async function PiriCardDetailPage({ params }: PiriCardDetailPageP
         business={overview.business}
         project={overview.project}
         initialRenewals={renewals}
+        today={today}
+      />
+
+      <ProjectMaintenanceSection
+        business={overview.business}
+        project={overview.project}
+        users={users}
+        initialMaintenanceRequests={maintenanceRequests}
         today={today}
       />
 

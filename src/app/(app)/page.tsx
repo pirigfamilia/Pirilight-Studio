@@ -22,15 +22,15 @@ const WEEKDAY_FORMATTER = new Intl.DateTimeFormat("pt-PT", { weekday: "long" });
 
 /**
  * Dashboard — versão real (Round 7; Objetivos ligado a `useGoalStore` no
- * Round 8).
+ * Round 8; Manutenção ligada a `useMaintenanceStore` no Round 9).
  *
  * Mesma estrutura de secções do placeholder (Round 1, plano secção 8), agora
  * alimentada por `attention-rules.ts` (Round 2, sem alterações) sobre dados
- * ao vivo: Business/Deal/Payment/MaintenanceRequest/User são só de leitura
- * nesta fase (sem store própria) e vêm direto do servidor; Task/Project/
- * Renewal/Goal semeiam as mesmas stores já usadas em `/tasks`, `/websites`,
- * `/piricards`, `/renewals` e `/goals` — o `DashboardBoard` (cliente) faz
- * toda a agregação/apresentação.
+ * ao vivo: Business/Deal/Payment/User são só de leitura nesta fase (sem
+ * store própria) e vêm direto do servidor; Task/Project/Renewal/Goal/
+ * MaintenanceRequest semeiam as mesmas stores já usadas em `/tasks`,
+ * `/websites`, `/piricards`, `/renewals`, `/goals` e `/maintenance` — o
+ * `DashboardBoard` (cliente) faz toda a agregação/apresentação.
  */
 export default async function DashboardPage() {
   const now = new Date();
@@ -61,12 +61,12 @@ export default async function DashboardPage() {
         businesses={businesses}
         deals={deals}
         payments={payments}
-        maintenanceRequests={maintenanceRequests}
         users={users}
         initialTasks={tasks}
         initialProjects={projects}
         initialRenewals={renewals}
         initialGoals={goals}
+        initialMaintenanceRequests={maintenanceRequests}
         today={today}
       />
     </div>

@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/store/use-project-store";
 import { useRenewalStore } from "@/store/use-renewal-store";
 import { useTaskStore } from "@/store/use-task-store";
-import type { Project, Renewal, Task } from "@/types";
+import type { MaintenanceRequest, Project, Renewal, Task } from "@/types";
 
 function matchesQuery(row: ClientListRow, query: string): boolean {
   if (query.trim().length === 0) return true;
@@ -41,10 +41,19 @@ interface ClientsBoardProps {
   initialProjects: Project[];
   initialTasks: Task[];
   initialRenewals: Renewal[];
+  /** Snapshot GLOBAL do servidor — só para semear a `useMaintenanceStore` (Round 9). */
+  initialMaintenanceRequests: MaintenanceRequest[];
   today: string;
 }
 
-export function ClientsBoard({ rows, initialProjects, initialTasks, initialRenewals, today }: ClientsBoardProps) {
+export function ClientsBoard({
+  rows,
+  initialProjects,
+  initialTasks,
+  initialRenewals,
+  initialMaintenanceRequests,
+  today,
+}: ClientsBoardProps) {
   const initializeProjects = useProjectStore((state) => state.initialize);
   const initializeTasks = useTaskStore((state) => state.initialize);
   const initializeRenewals = useRenewalStore((state) => state.initialize);
@@ -119,7 +128,12 @@ export function ClientsBoard({ rows, initialProjects, initialTasks, initialRenew
         rows={filteredRows}
         rowKey={(row) => row.summary.business.id}
         renderMobileCard={(row) => (
-          <BusinessCard row={row} initialProjects={initialProjects} initialTasks={initialTasks} />
+          <BusinessCard
+            row={row}
+            initialProjects={initialProjects}
+            initialTasks={initialTasks}
+            initialMaintenanceRequests={initialMaintenanceRequests}
+          />
         )}
         emptyState={
           <EmptyState
@@ -147,7 +161,7 @@ export function ClientsBoard({ rows, initialProjects, initialTasks, initialRenew
                 businessId={row.businessId}
                 projectIds={row.projectIds}
                 dealIds={row.dealIds}
-                maintenanceRequests={row.maintenanceRequests}
+                initialMaintenanceRequests={initialMaintenanceRequests}
                 initialProjects={initialProjects}
                 initialTasks={initialTasks}
               />

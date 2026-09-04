@@ -37,6 +37,7 @@ import { renewalTypeLabel, workStatusLabel } from "@/lib/constants/labels";
 import { diffCalendarDays } from "@/lib/utils/date";
 import { isOpenDealStage } from "@/lib/validation/deal";
 import { useGoalStore } from "@/store/use-goal-store";
+import { useMaintenanceStore } from "@/store/use-maintenance-store";
 import { useProjectStore } from "@/store/use-project-store";
 import { useRenewalStore } from "@/store/use-renewal-store";
 import { useTaskStore } from "@/store/use-task-store";
@@ -54,17 +55,17 @@ import type {
 } from "@/types";
 
 interface DashboardBoardProps {
-  /** Estáticos nesta fase — sem store própria (Deal/Payment/MaintenanceRequest só leitura na Phase 1A). */
+  /** Estáticos nesta fase — sem store própria (Deal/Payment só leitura na Phase 1A). */
   businesses: Business[];
   deals: Deal[];
   payments: Payment[];
-  maintenanceRequests: MaintenanceRequest[];
   users: User[];
   /** Snapshots globais do servidor — só para semear as stores se ainda não estiverem inicializadas. */
   initialTasks: Task[];
   initialProjects: Project[];
   initialRenewals: Renewal[];
   initialGoals: Goal[];
+  initialMaintenanceRequests: MaintenanceRequest[];
   today: string;
 }
 
@@ -77,19 +78,19 @@ interface DashboardBoardProps {
  * já usadas em `/tasks`, `/websites`, `/piricards`, `/renewals` e `/goals`,
  * para uma mudança feita em qualquer um desses sítios aparecer aqui de
  * imediato, sem reload — a mesma disciplina do Round 5.1/6 aplicada ao
- * resumo do topo. Business/Deal/Payment/MaintenanceRequest continuam só de
- * leitura nesta fase (sem store própria).
+ * resumo do topo. Business/Deal/Payment continuam só de leitura nesta fase
+ * (sem store própria).
  */
 export function DashboardBoard({
   businesses,
   deals,
   payments,
-  maintenanceRequests,
   users,
   initialTasks,
   initialProjects,
   initialRenewals,
   initialGoals,
+  initialMaintenanceRequests,
   today,
 }: DashboardBoardProps) {
   const initializeTasks = useTaskStore((state) => state.initialize);
@@ -100,12 +101,15 @@ export function DashboardBoard({
   const liveRenewals = useRenewalStore((state) => state.renewals);
   const initializeGoals = useGoalStore((state) => state.initialize);
   const liveGoals = useGoalStore((state) => state.goals);
+  const initializeMaintenance = useMaintenanceStore((state) => state.initialize);
+  const liveMaintenanceRequests = useMaintenanceStore((state) => state.requests);
 
   useEffect(() => {
     initializeTasks(initialTasks);
     initializeProjects(initialProjects);
     initializeRenewals(initialRenewals);
     initializeGoals(initialGoals);
+    initializeMaintenance(initialMaintenanceRequests);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -116,13 +120,13 @@ export function DashboardBoard({
   const attentionItems = useMemo(
     () =>
       rankAttention([
-        ...taskAttention(liveTasks, { businesses, projects: liveProjects, deals, maintenanceRequests }, today),
+        ...taskAttention(liveTasks, { businesses, projects: liveProjects, deals, maintenanceRequests: liveMaintenanceRequests }, today),
         ...dealAttention(deals, businesses, today),
         ...paymentAttention(payments, businesses, today),
         ...renewalAttention(liveRenewals, { projects: liveProjects, businesses }, today),
-        ...maintenanceAttention(maintenanceRequests, businesses, today),
+        ...maintenanceAttention(liveMaintenanceRequests, businesses, today),
       ]),
-    [liveTasks, liveProjects, liveRenewals, businesses, deals, payments, maintenanceRequests, today],
+    [liveTasks, liveProjects, liveRenewals, businesses, deals, payments, liveMaintenanceRequests, today],
   );
 
   const blockedProjectsCount = useMemo(
@@ -135,10 +139,10 @@ export function DashboardBoard({
       buildWaitingOnClientItems({
         projects: liveProjects,
         tasks: liveTasks,
-        maintenanceRequests,
+        maintenanceRequests: liveMaintenanceRequests,
         businesses,
       }),
-    [liveProjects, liveTasks, maintenanceRequests, businesses],
+    [liveProjects, liveTasks, liveMaintenanceRequests, businesses],
   );
 
   const counters = useMemo(
@@ -520,9 +524,8 @@ function displayTitle(item: AttentionItem): string {
  * - `deal` → aba Comercial do Business Detail (já existia desde o Round 7)
  * - `payment` → aba Pagamentos do Business Detail (Finance ainda não é
  *   funcional — nunca se deve levar para lá)
- * - `maintenance` → Business Detail (sem aba própria para Manutenção nem
- *   `projectId` no `AttentionItem` — este é o destino mínimo com contexto
- *   real, sem alterar `attention-rules.ts`)
+ * - `maintenance` → aba Manutenção do Business Detail (Round 9: a aba passou
+ *   a existir; antes disso ia só para o Business Detail sem aba nenhuma)
  * Sem `businessId`, cai sempre no `item.href` original (`/tasks`,
  * `/renewals`, `/commercial`, `/finance`, `/maintenance`).
  */
@@ -535,7 +538,7 @@ export function resolveItemHref(item: AttentionItem): string {
     case "payment":
       return `/businesses/${item.businessId}?tab=payments`;
     case "maintenance":
-      return `/businesses/${item.businessId}`;
+      return `/businesses/${item.businessId}?tab=maintenance`;
     default:
       return item.href;
   }

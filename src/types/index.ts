@@ -79,4 +79,6 @@ export type {
   RenewalListRow,
   GoalStatus,
   GoalNextAction,
+  MaintenanceListRow,
+  MaintenanceTiming,
 } from "./views";

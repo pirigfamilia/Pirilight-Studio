@@ -9,17 +9,19 @@ import { Card } from "@/components/ui/card";
 import { formatDateDisplay } from "@/lib/utils/format";
 import { renewalTypeLabel } from "@/lib/constants/labels";
 import { cn } from "@/lib/utils";
-import type { Project, Task } from "@/types";
+import type { MaintenanceRequest, Project, Task } from "@/types";
 
 interface BusinessCardProps {
   row: ClientListRow;
   /** Snapshots globais do servidor — repassados ao `LiveOverallStatusBadge`/`useLiveBusinessCounts` (D7). */
   initialProjects: Project[];
   initialTasks: Task[];
+  /** Snapshot GLOBAL do servidor — só para semear a `useMaintenanceStore` (Round 9). */
+  initialMaintenanceRequests: MaintenanceRequest[];
 }
 
 /** Cartão de negócio — a vista mobile da lista de Clientes (a tabela vira isto abaixo de `md`). */
-export function BusinessCard({ row, initialProjects, initialTasks }: BusinessCardProps) {
+export function BusinessCard({ row, initialProjects, initialTasks, initialMaintenanceRequests }: BusinessCardProps) {
   const { summary, responsibleName } = row;
   const { business, nextRenewal } = summary;
 
@@ -46,7 +48,7 @@ export function BusinessCard({ row, initialProjects, initialTasks }: BusinessCar
             businessId={row.businessId}
             projectIds={row.projectIds}
             dealIds={row.dealIds}
-            maintenanceRequests={row.maintenanceRequests}
+            initialMaintenanceRequests={initialMaintenanceRequests}
             initialProjects={initialProjects}
             initialTasks={initialTasks}
           />

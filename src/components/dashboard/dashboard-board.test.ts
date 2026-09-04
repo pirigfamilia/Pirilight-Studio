@@ -38,9 +38,9 @@ describe("resolveItemHref (Round 7.1)", () => {
     expect(resolveItemHref(item)).toBe("/businesses/biz-1?tab=payments");
   });
 
-  it("maintenance com businessId vai para o Business Detail (sem aba — não há uma para Manutenção)", () => {
+  it("maintenance com businessId vai para a aba Manutenção do Business Detail (Round 9: a aba passou a existir)", () => {
     const item = makeItem({ kind: "maintenance", href: "/maintenance", businessId: "biz-1" });
-    expect(resolveItemHref(item)).toBe("/businesses/biz-1");
+    expect(resolveItemHref(item)).toBe("/businesses/biz-1?tab=maintenance");
   });
 
   it("payment sem businessId mantém o fallback original (/finance)", () => {
