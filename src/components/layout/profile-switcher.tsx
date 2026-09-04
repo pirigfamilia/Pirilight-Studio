@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, LogOut } from "lucide-react";
 
+import { logoutAction } from "@/app/actions/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +55,15 @@ export function ProfileSwitcher({ collapsed = false }: { collapsed?: boolean }) 
             {profile.name}
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <form action={logoutAction}>
+          <DropdownMenuItem asChild>
+            <button type="submit" className="w-full cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" />
+              Terminar sessão
+            </button>
+          </DropdownMenuItem>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );
